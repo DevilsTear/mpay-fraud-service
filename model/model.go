@@ -5,6 +5,10 @@ type RuleSet struct {
 	Key      string      `json:"key"`
 	Priority int         `json:"priority"`
 	Value    interface{} `json:"value"`
+	Status   bool        `json:"status"`
+
+	// TODO - make Enum
+	Operator string `json:"operator"`
 }
 
 type RuleSetPayload struct {

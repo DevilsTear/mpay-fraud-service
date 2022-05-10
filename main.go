@@ -17,7 +17,7 @@ var addr = flag.String("addr", ":8080", "http service address")
 
 func main() {
 	config.LoadInitials(ctx)
-	go pubsub.SubscribeEvent(ctx, "fraud:ruleset_changed")
+	go pubsub.SubscribeEvent(ctx, config.SUB_RULE_SET_CHANGED)
 
 	http.HandleFunc("/fraud", func(w http.ResponseWriter, r *http.Request) {
 		serveEndpoint(w, r, "fraud")
@@ -48,7 +48,7 @@ func serveEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		resData, err := json.Marshal(payload)
+		// TODO - Fraud checks
 		if err != nil {
 			log.Println(err)
 		}
@@ -56,7 +56,7 @@ func serveEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 			Status:  model.SuccessResponse,
 			Code:    100,
 			Message: "Success",
-			Data:    resData,
+			Data:    payload,
 		}
 	}
 

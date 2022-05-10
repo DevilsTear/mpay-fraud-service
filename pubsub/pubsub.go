@@ -29,6 +29,8 @@ sub_loop:
 			payload := receiveMessage(ctx, redisSubChan)
 			json.Unmarshal(payload, &rulesetPayload)
 			config.ChannelRuleSetPayload <- rulesetPayload
+
+			//TODO - Set global variables..
 		default:
 			break sub_loop
 		}

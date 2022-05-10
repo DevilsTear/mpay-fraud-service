@@ -51,3 +51,10 @@ const (
 	FailResponse    ResponseType = "fail"
 	ErrorResponse   ResponseType = "error"
 )
+
+type ResponsePayload struct {
+	Status  ResponseType
+	Data    interface{}
+	Code    int
+	Message string
+}

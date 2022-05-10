@@ -10,9 +10,9 @@ import (
 // PublishEvent method publishes a new event to the appropriate Redis channel
 func PublishEvent(ctx context.Context, eventType string, payload interface{}) {
 	switch eventType {
-	case "fraud:blacklist":
-	case "fraud:clear_counter":
-	case "fraud:increase_counter":
+	case config.PUB_BLACK_LIST:
+	case config.PUB_CLEAR_COUNTER:
+	case config.PUB_INCREASE_COUNTER:
 		if pubPayload, err := json.Marshal(payload); err == nil {
 			config.RedisClient.Publish(ctx, eventType, pubPayload)
 		}
@@ -24,7 +24,7 @@ func SubscribeEvent(ctx context.Context, redisSubChan string) {
 sub_loop:
 	for {
 		switch redisSubChan {
-		case "fraud:rule_sets_changed":
+		case config.SUB_RULE_SET_CHANGED:
 			rulesetPayload := model.RuleSetPayload{}
 			payload := receiveMessage(ctx, redisSubChan)
 			json.Unmarshal(payload, &rulesetPayload)

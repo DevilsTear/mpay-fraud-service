@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"fraud-service/model"
 	"sort"
@@ -20,7 +21,7 @@ func (ruleset rulesetList) Len() int {
 }
 
 func (ruleset rulesetList) Less(i, j int) bool {
-	return ruleset[i].Priority > ruleset[j].Priority
+	return ruleset[i].Priority < ruleset[j].Priority
 }
 
 func (ruleset rulesetList) Swap(i, j int) {
@@ -29,4 +30,12 @@ func (ruleset rulesetList) Swap(i, j int) {
 
 func SortRuleSetsByPriority(payload *model.RuleSetPayload) {
 	sort.Sort(rulesetList(payload.Data))
+}
+
+func Struct2Map(obj interface{}) map[string]interface{} {
+	var mappedObj map[string]interface{}
+	inrec, _ := json.Marshal(obj)
+	json.Unmarshal(inrec, &mappedObj)
+
+	return mappedObj
 }

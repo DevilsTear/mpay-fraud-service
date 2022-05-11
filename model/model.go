@@ -3,28 +3,27 @@ package model
 type OperatorType string
 
 const (
-	eq  OperatorType = "==" // equals to
-	ne  OperatorType = "!=" // not equals to
-	lt  OperatorType = "<"  // less than
-	gt  OperatorType = ">"  // greater than
-	le  OperatorType = "<=" // less than equal to
-	ge  OperatorType = ">=" // greater than equal to
-	co  OperatorType = ""   // contains"
-	sw  OperatorType = ""   // starts with
-	ew  OperatorType = ""   // ends with
-	in  OperatorType = ""   // in a list
-	pr  OperatorType = ""   // present
-	not OperatorType = ""   // not of a logical expression
+	eq  OperatorType = "=="         // equals to
+	ne  OperatorType = "!="         // not equals to
+	lt  OperatorType = "<"          // less than
+	gt  OperatorType = ">"          // greater than
+	le  OperatorType = "<="         // less than equal to
+	ge  OperatorType = ">="         // greater than equal to
+	co  OperatorType = "contains"   // contains"
+	sw  OperatorType = "startsWith" // starts with
+	ew  OperatorType = "endsWith"   // ends with
+	in  OperatorType = "in"         // in a list
+	pr  OperatorType = "pr"         // present
+	not OperatorType = "not"        // not of a logical expression
 )
 
 type RuleSet struct {
 	Name     string      `json:"name"`
-	Key      string      `json:"key"`
+	Key      string      `json:"key"` // bounded with the rule
 	Priority int         `json:"priority"`
 	Value    interface{} `json:"value"`
 	Status   bool        `json:"status"`
 
-	// TODO - make Enum
 	Operator OperatorType `json:"operator"`
 }
 

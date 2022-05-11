@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fraud-service/config"
 	"fraud-service/model"
+	rulesets "fraud-service/ruleset"
+	"fraud-service/utils"
+	"log"
 )
 
 // PublishEvent method publishes a new event to the appropriate Redis channel
@@ -20,19 +23,26 @@ func PublishEvent(ctx context.Context, eventType string, payload interface{}) {
 }
 
 // SubscribeEvent method subscribes to the appropriate Redis channel and receives data from the related listerners
+// redis-cli sample:
+// PUBLISH "fraud:rule_sets_changed" '{"data": [{"name": "Rule 1","key": "Key ","priority": 1,"value": "10","status": true,"operator": "gt"},{"name": "Rule 2","key": "Key ","priority": 4,"value": "10","status": true,"operator": "gt"},{"name": "Rule 3","key": "Key ","priority": 3,"value": "10","status": false,"operator": "gt"},{"name": "Rule 4","key": "Key ","priority":2,"value": "10","status": true,"operator": "gt"}]}'
+// TODO: make refactoring about robustness
 func SubscribeEvent(ctx context.Context, redisSubChan string) {
-sub_loop:
+	// sub_loop:
 	for {
+		payload := receiveMessage(ctx, redisSubChan)
 		switch redisSubChan {
 		case config.SUB_RULE_SET_CHANGED:
 			rulesetPayload := model.RuleSetPayload{}
-			payload := receiveMessage(ctx, redisSubChan)
 			json.Unmarshal(payload, &rulesetPayload)
-			config.ChannelRuleSetPayload <- rulesetPayload
-
-			//TODO - Set global variables..
-		default:
-			break sub_loop
+			log.Println(rulesetPayload)
+			utils.SortRuleSetsByPriority(&rulesetPayload)
+			log.Println(rulesetPayload)
+			activeRules := rulesets.GetInstance()
+			activeRules.SetPayload(rulesetPayload.Data)
+			log.Println(activeRules.GetPayload())
+			// config.ChannelRuleSetPayload <- rulesetPayload
+			// default:
+			// 	break sub_loop
 		}
 	}
 }

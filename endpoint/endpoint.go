@@ -3,6 +3,7 @@ package endpoint
 import (
 	"encoding/json"
 	"fraud-service/model"
+	"fraud-service/rules"
 	rulesets "fraud-service/ruleset"
 	"fraud-service/utils"
 	"log"
@@ -28,15 +29,24 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		// TODO - Fraud checks
-		if err != nil {
+
+		// Fraud checks
+		isPassed, err := rules.EvaluateRules(&payload)
+		if err != nil || !isPassed {
 			log.Println(err)
+			resPayload = model.ResponsePayload{
+				Status:  model.FailResponse,
+				Code:    -100,
+				Message: "Fail",
+				Data:    isPassed,
+			}
 		}
+
 		resPayload = model.ResponsePayload{
 			Status:  model.SuccessResponse,
 			Code:    100,
 			Message: "Success",
-			Data:    payload,
+			Data:    isPassed,
 		}
 	case "rules":
 		var payload model.RuleSetPayload
@@ -45,7 +55,6 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		// TODO - Fraud checks
 		if err != nil {
 			log.Println(err)
 		}

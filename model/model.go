@@ -1,5 +1,22 @@
 package model
 
+type OperatorType string
+
+const (
+	eq  OperatorType = "==" // equals to
+	ne  OperatorType = "!=" // not equals to
+	lt  OperatorType = "<"  // less than
+	gt  OperatorType = ">"  // greater than
+	le  OperatorType = "<=" // less than equal to
+	ge  OperatorType = ">=" // greater than equal to
+	co  OperatorType = ""   // contains"
+	sw  OperatorType = ""   // starts with
+	ew  OperatorType = ""   // ends with
+	in  OperatorType = ""   // in a list
+	pr  OperatorType = ""   // present
+	not OperatorType = ""   // not of a logical expression
+)
+
 type RuleSet struct {
 	Name     string      `json:"name"`
 	Key      string      `json:"key"`
@@ -8,7 +25,7 @@ type RuleSet struct {
 	Status   bool        `json:"status"`
 
 	// TODO - make Enum
-	Operator string `json:"operator"`
+	Operator OperatorType `json:"operator"`
 }
 
 type RuleSetPayload struct {

@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fraud-service/config"
-	"fraud-service/model"
+	"fraud-service/endpoint"
 	"fraud-service/pubsub"
 	"log"
 	"net/http"
@@ -20,48 +19,16 @@ func main() {
 	go pubsub.SubscribeEvent(ctx, config.SUB_RULE_SET_CHANGED)
 
 	http.HandleFunc("/fraud", func(w http.ResponseWriter, r *http.Request) {
-		serveEndpoint(w, r, "fraud")
+		endpoint.ServeEndpoint(w, r, "fraud")
 	})
+
+	http.HandleFunc("/rules", func(w http.ResponseWriter, r *http.Request) {
+		endpoint.ServeEndpoint(w, r, "rules")
+	})
+
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 
-}
-
-func serveEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	resPayload := model.ResponsePayload{
-		Status:  model.SuccessResponse,
-		Code:    100,
-		Message: "Success",
-	}
-
-	switch endpoint {
-	case "fraud":
-		var payload model.RequestPayload
-		err := json.NewDecoder(r.Body).Decode(&payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		// TODO - Fraud checks
-		if err != nil {
-			log.Println(err)
-		}
-		resPayload = model.ResponsePayload{
-			Status:  model.SuccessResponse,
-			Code:    100,
-			Message: "Success",
-			Data:    payload,
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resPayload)
 }

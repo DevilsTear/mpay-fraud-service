@@ -1,4 +1,4 @@
-package payload
+package ruleset
 
 import (
 	model "fraud-service/model"
@@ -19,11 +19,21 @@ func GetInstance() *ruleSetPayload {
 func (p *ruleSetPayload) SetPayload(data []model.RuleSet) {
 	p.Lock()
 	defer p.Unlock()
-	p.Data = data
+	p.Data = filterActiveOnes(data)
 }
 
 func (p *ruleSetPayload) GetPayload() []model.RuleSet {
 	p.RLock()
 	defer p.RUnlock()
 	return p.Data
+}
+
+func filterActiveOnes(rules []model.RuleSet) (out []model.RuleSet) {
+	for i := range rules {
+		if rules[i].Status {
+			out = append(out, rules[i])
+		}
+	}
+
+	return
 }

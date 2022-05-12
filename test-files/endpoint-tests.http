@@ -1,0 +1,129 @@
+GET http://localhost:8080
+Accept: application/json
+
+###
+# Fraud detection parameters assignment endpoint
+#
+# curl -X 'POST' \
+#   'http://localhost:8080/rules' \
+#   -H 'accept: application/json' \
+#   -H 'Content-Type: application/json' \
+#   -d '{
+#     "data": [
+#         {
+#             "name": "Rule 1",
+#             "key": "Key ",
+#             "priority": 1,
+#             "value": "10",
+#             "status": true,
+#             "operator": "gt"
+#         },{
+#             "name": "Rule 2",
+#             "key": "Key ",
+#             "priority": 4,
+#             "value": "10",
+#             "status": true,
+#             "operator": "gt"
+#         },{
+#             "name": "Rule 3",
+#             "key": "Key ",
+#             "priority": 3,
+#             "value": "10",
+#             "status": false,
+#             "operator": "gt"
+#         },{
+#             "name": "Rule 4",
+#             "key": "Key ",
+#             "priority": 2,
+#             "value": "10",
+#             "status": true,
+#             "operator": "gt"
+#         }
+#     ]
+# }'
+POST {{HOST}}/rules
+Accept: application/json
+{
+    "data": [
+        {
+            "name": "Rule 1",
+            "key": "Key ",
+            "priority": 1,
+            "value": "10",
+            "status": true,
+            "operator": "gt"
+        },{
+            "name": "Rule 2",
+            "key": "Key ",
+            "priority": 4,
+            "value": "10",
+            "status": true,
+            "operator": "gt"
+        },{
+            "name": "Rule 3",
+            "key": "Key ",
+            "priority": 3,
+            "value": "10",
+            "status": false,
+            "operator": "gt"
+        },{
+            "name": "Rule 4",
+            "key": "Key ",
+            "priority": 2,
+            "value": "10",
+            "status": true,
+            "operator": "gt"
+        }
+    ]
+}
+###
+# Fraud detection endpoint
+#
+# curl -X 'POST' \
+#   'http://localhost:8080/fraud' \
+#   -H 'accept: application/json' \
+#   -H 'Content-Type: application/json' \
+#    -d '{
+# 		"data": {
+# 			"amount": "250.00",
+# 			"trx": "oaisufklafasfl1111112d1233",
+# 			"card_number": "4943******2271",
+# 			"expiration_month": "10",
+# 			"expiration_year": "2022",
+# 			"cardholders_name": "*** *****",
+# 			"cvv": "402",
+# 			"return_url": "https://envoysoft3.net/deposit/mpayReturn"
+# 		},
+# 		"user": {
+# 			"username": "srdr16",
+# 			"userID": "17206739184",
+# 			"yearofbirth": "1983",
+# 			"fullname": "*** *****",
+# 			"email": "****@hotmail.com",
+# 			"tckn": "17206739184",
+# 			"ip_address": "95.10.24.238"
+# 		}
+# 	}'
+POST {{HOST}}/fraud
+Accept: application/json
+{
+		"data": {
+			"amount": "250.00",
+			"trx": "oaisufklafasfl1111112d1233",
+			"card_number": "4943******2271",
+			"expiration_month": "10",
+			"expiration_year": "2022",
+			"cardholders_name": "*** *****",
+			"cvv": "402",
+			"return_url": "https://envoysoft3.net/deposit/mpayReturn"
+		},
+		"user": {
+			"username": "srdr16",
+			"userID": "17206739184",
+			"yearofbirth": "1983",
+			"fullname": "*** *****",
+			"email": "****@hotmail.com",
+			"tckn": "17206739184",
+			"ip_address": "95.10.24.238"
+		}
+	}

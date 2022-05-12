@@ -83,6 +83,8 @@ var reqFraudJSON = `{
 	}
 }`
 
+var resFraudExpectedJSON = ``
+
 var reqRulesJSON = `{
 	"data": [
 		{
@@ -117,4 +119,4 @@ var reqRulesJSON = `{
 	]
 }`
 
-// var resExpectedJSON = `{"Status":"success","Data":[{"name":"Rule 1","key":"Key ","priority":1,"value":"10","status":true,"operator":"gt"},{"name":"Rule 4","key":"Key ","priority":2,"value":"10","status":true,"operator":"gt"},{"name":"Rule 2","key":"Key ","priority":4,"value":"10","status":true,"operator":"gt"}],"Code":200,"Message":"Success"}`
+// var resRulesExpectedJSON = `{"Status":"success","Data":[{"name":"Rule 1","key":"Key ","priority":1,"value":"10","status":true,"operator":"gt"},{"name":"Rule 4","key":"Key ","priority":2,"value":"10","status":true,"operator":"gt"},{"name":"Rule 2","key":"Key ","priority":4,"value":"10","status":true,"operator":"gt"}],"Code":200,"Message":"Success"}`

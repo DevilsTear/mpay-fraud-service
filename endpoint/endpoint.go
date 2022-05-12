@@ -17,7 +17,7 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 	}
 	resPayload := model.ResponsePayload{
 		Status:  model.SuccessResponse,
-		Code:    100,
+		Code:    http.StatusOK,
 		Message: "Success",
 	}
 
@@ -44,7 +44,7 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 
 		resPayload = model.ResponsePayload{
 			Status:  model.SuccessResponse,
-			Code:    100,
+			Code:    http.StatusOK,
 			Message: "Success",
 			Data:    isPassed,
 		}
@@ -60,15 +60,15 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 		}
 		log.Println(payload)
 		utils.SortRuleSetsByPriority(&payload)
-		log.Println(payload)
+		// log.Println(payload)
 		activeRules := rulesets.GetInstance()
 		activeRules.SetPayload(payload.Data)
-		log.Println(activeRules.GetPayload())
+		// log.Println(activeRules.GetPayload())
 		resPayload = model.ResponsePayload{
 			Status:  model.SuccessResponse,
-			Code:    100,
+			Code:    http.StatusOK,
 			Message: "Success",
-			Data:    payload,
+			Data:    activeRules.GetPayload(),
 		}
 	}
 

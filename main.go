@@ -18,12 +18,12 @@ func main() {
 	config.LoadInitials(ctx)
 	go pubsub.SubscribeEvent(ctx, config.SUB_RULE_SET_CHANGED)
 
-	http.HandleFunc("/fraud", func(w http.ResponseWriter, r *http.Request) {
-		endpoint.ServeEndpoint(w, r, "fraud")
+	http.HandleFunc("/"+config.FRAUD_ENDPOINT, func(w http.ResponseWriter, r *http.Request) {
+		endpoint.ServeEndpoint(w, r, config.FRAUD_ENDPOINT)
 	})
 
-	http.HandleFunc("/rules", func(w http.ResponseWriter, r *http.Request) {
-		endpoint.ServeEndpoint(w, r, "rules")
+	http.HandleFunc("/"+config.RULES_ENDPOINT, func(w http.ResponseWriter, r *http.Request) {
+		endpoint.ServeEndpoint(w, r, config.RULES_ENDPOINT)
 	})
 
 	err := http.ListenAndServe(*addr, nil)

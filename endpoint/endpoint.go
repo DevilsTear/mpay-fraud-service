@@ -2,6 +2,7 @@ package endpoint
 
 import (
 	"encoding/json"
+	"fraud-service/config"
 	"fraud-service/model"
 	"fraud-service/rules"
 	rulesets "fraud-service/ruleset"
@@ -22,7 +23,7 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 	}
 
 	switch endpoint {
-	case "fraud":
+	case config.FRAUD_ENDPOINT:
 		var payload model.RequestPayload
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		if err != nil {
@@ -48,7 +49,7 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 			Message: "Success",
 			Data:    isPassed,
 		}
-	case "rules":
+	case config.RULES_ENDPOINT:
 		var payload model.RuleSetPayload
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		if err != nil {

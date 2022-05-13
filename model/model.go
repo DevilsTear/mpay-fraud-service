@@ -64,6 +64,36 @@ type RedisConfig struct {
 	DB       int    `json:"db"`
 }
 
+type MySqlConfig struct {
+	// data source name
+	// "gorm:gorm@tcp(127.0.0.1:3306)/gorm?charset=utf8&parseTime=True&loc=Local",
+	DSN string `json:"dns"`
+
+	// default size for string fields
+	// default: 256
+	DefaultStringSize uint `json:"default_string_size"`
+
+	// disable datetime precision, which not supported before MySQL 5.6
+	// default: true
+	DisableDatetimePrecision bool `json:"disable_datetime_precision"`
+
+	// default datetime precision
+	// default: 2
+	DefaultDatetimePrecision int `json:"default_datetime_precision"`
+
+	// drop & create when rename index, rename index not supported before MySQL 5.7, MariaDB
+	// default: true
+	DontSupportRenameIndex bool `json:"dont_support_rename_index"`
+
+	// `change` when rename column, rename column not supported before MySQL 8, MariaDB
+	// default: true
+	DontSupportRenameColumn bool `json:"dont_support_rename_column"`
+
+	// auto configure based on currently MySQL version
+	// default: false
+	SkipInitializeWithVersion bool `json:"skip_initialize_with_version"`
+}
+
 type ResponseType string
 
 const (

@@ -32,11 +32,11 @@ type RuleSetPayload struct {
 }
 
 type RequestPayload struct {
-	Data RequestData `json:"data"`
-	User RequestUser `json:"user"`
+	Transaction RequestTransaction `json:"data"`
+	User        RequestUser        `json:"user"`
 }
 
-type RequestData struct {
+type RequestTransaction struct {
 	Amount          string `json:"amount"`
 	TransactionId   string `json:"trx"`
 	CardNumber      string `json:"card_number"`
@@ -54,7 +54,6 @@ type RequestUser struct {
 	FullName    string `json:"fullname"`
 	Email       string `json:"email"`
 	TCKN        string `json:"tckn"`
-	CVV         string `json:"cvv"`
 	IPAddress   string `json:"ip_address"`
 }
 

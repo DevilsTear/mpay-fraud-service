@@ -3,9 +3,11 @@ package rules
 import (
 	"errors"
 	"fmt"
+	"fraud-service/config"
 	"fraud-service/model"
 	rulesets "fraud-service/ruleset"
 	"fraud-service/utils"
+	"strings"
 	"sync"
 )
 
@@ -61,6 +63,22 @@ func (payload *requestPayload) ProcessRules() (bool, error) {
 			return false, errors.New(fmt.Sprintf("%v check is failed!\nError Details: %v", ruleSet.Key, err))
 		}
 	}
+	return true, nil
+}
+
+func (payload *requestPayload) checkCardBIN() (bool, error) {
+	binExists := false
+	cardNumber := &payload.Data.Transaction.CardNumber
+	*cardNumber = strings.Trim(payload.Data.Transaction.CardNumber, " ")
+	if *cardNumber == "" {
+		return binExists, errors.New("card number is empty")
+	}
+
+	if err := config.MySqlDB.Raw("SELECT 1 FROM cc_binlist WHERE card_bin = ? LIMIT 1", (*cardNumber)[:7]).
+		Row().Scan(&binExists); err != nil || !binExists {
+		return binExists, errors.New(fmt.Sprintf("card issuer is not listed in the bin list!\nError Details: %v", err))
+	}
+
 	return true, nil
 }
 

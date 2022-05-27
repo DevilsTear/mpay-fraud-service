@@ -42,6 +42,10 @@ func (payload *requestPayload) ProcessRules() (bool, error) {
 		return false, errors.New("please, define your rule sets first")
 	}
 
+	if isOK, err = payload.checkCardBIN(); err != nil {
+		return false, errors.New(fmt.Sprintf("%v check is failed!\nError Details: %v", "checkCardBIN", err))
+	}
+
 	for _, ruleSet := range ruleSets {
 		switch ruleSet.Key {
 		case "PendingCountThreshold":
@@ -74,9 +78,17 @@ func (payload *requestPayload) checkCardBIN() (bool, error) {
 		return binExists, errors.New("card number is empty")
 	}
 
-	if err := config.MySqlDB.Raw("SELECT 1 FROM cc_binlist WHERE card_bin = ? LIMIT 1", (*cardNumber)[:7]).
-		Row().Scan(&binExists); err != nil || !binExists {
-		return binExists, errors.New(fmt.Sprintf("card issuer is not listed in the bin list!\nError Details: %v", err))
+	cardBin := (*cardNumber)[:6]
+	err := config.MySqlDB.Raw("SELECT 1 as binExists FROM cc_binlist WHERE card_bin = ? LIMIT 1", cardBin).
+		Scan(&binExists)
+
+	if err.Error != nil || !binExists {
+		errString := "card issuer is not listed in the bin list!"
+		if err.Error != nil {
+			errString += fmt.Sprintf("\nError Details: %v", err)
+		}
+
+		return binExists, errors.New(errString)
 	}
 
 	return true, nil

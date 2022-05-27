@@ -32,6 +32,7 @@ type RuleSetPayload struct {
 }
 
 type RequestPayload struct {
+	ClientId    string             `json:"client_id"`
 	Transaction RequestTransaction `json:"data"`
 	User        RequestUser        `json:"user"`
 }
@@ -48,8 +49,8 @@ type RequestTransaction struct {
 }
 
 type RequestUser struct {
-	Username    string `json:"username"`
 	UserId      string `json:"userID"`
+	Username    string `json:"username"`
 	YearOdBirth string `json:"yearofbirth"`
 	FullName    string `json:"fullname"`
 	Email       string `json:"email"`

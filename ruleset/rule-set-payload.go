@@ -1,7 +1,9 @@
 package ruleset
 
 import (
+	"errors"
 	model "fraud-service/model"
+	"sort"
 	"sync"
 )
 
@@ -10,22 +12,24 @@ type ruleSetPayload struct {
 	sync.RWMutex
 }
 
+type rulesetList []model.RuleSet
+
 var instance ruleSetPayload
 
 func GetInstance() *ruleSetPayload {
 	return &instance
 }
 
-func (p *ruleSetPayload) SetPayload(data []model.RuleSet) {
-	p.Lock()
-	defer p.Unlock()
-	p.Data = filterActiveOnes(data)
+func (payload *ruleSetPayload) SetPayload(data []model.RuleSet) {
+	payload.Lock()
+	defer payload.Unlock()
+	payload.Data = filterActiveOnes(data)
 }
 
-func (p *ruleSetPayload) GetPayload() []model.RuleSet {
-	p.RLock()
-	defer p.RUnlock()
-	return p.Data
+func (payload *ruleSetPayload) GetPayload() []model.RuleSet {
+	payload.RLock()
+	defer payload.RUnlock()
+	return payload.Data
 }
 
 func filterActiveOnes(rules []model.RuleSet) (out []model.RuleSet) {
@@ -36,4 +40,25 @@ func filterActiveOnes(rules []model.RuleSet) (out []model.RuleSet) {
 	}
 
 	return
+}
+
+func (payload *ruleSetPayload) SortRuleSetsByPriority() error {
+	if payload == nil {
+		return errors.New("payload is nil")
+	}
+	sort.Sort(rulesetList(payload.Data))
+
+	return nil
+}
+
+func (ruleset rulesetList) Len() int {
+	return len(ruleset)
+}
+
+func (ruleset rulesetList) Less(i, j int) bool {
+	return ruleset[i].Priority < ruleset[j].Priority
+}
+
+func (ruleset rulesetList) Swap(i, j int) {
+	ruleset[i], ruleset[j] = ruleset[j], ruleset[i]
 }

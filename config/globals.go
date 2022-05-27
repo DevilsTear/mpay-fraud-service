@@ -7,21 +7,37 @@ import (
 	"gorm.io/gorm"
 )
 
-var RedisConfig model.RedisConfig
-var RedisClient redis.Client
+var (
+	RedisConfig model.RedisConfig
+	RedisClient redis.Client
+)
 
-var MySqlConfig model.MySqlConfig
-var MySqlDB gorm.DB
+var (
+	MySqlConfig model.MySqlConfig
+	MySqlDB     gorm.DB
+)
 
-var ChannelRuleSetPayload = make(chan model.RuleSetPayload)
+var ChannelRuleSetPayload = make(chan []model.RuleSet)
 
-// Fraud control params
-var PendingCountThreshold int = 10
-var PendingAllowanceByTimeInterval int = 10
-var ApprovedAllowanceByTimeInterval int = 30
-var MaxDailyAllowancePerUser int = 5
-var MinTransactionAmount float64 = 50.0
-var MaxTransactionAmount float64 = 1000.0
+var (
+	// PendingCountThreshold is a fraud control param expresses to check pending request counts
+	PendingCountThreshold int = 10
+
+	// PendingAllowanceByTimeInterval is a fraud control param expresses to check pending request allowance in a predefined time slot
+	PendingAllowanceByTimeInterval int = 10
+
+	// ApprovedAllowanceByTimeInterval is a fraud control param expresses to check pending request approval in a predefined time slot
+	ApprovedAllowanceByTimeInterval int = 30
+
+	// MaxDailyAllowancePerUser is a fraud control param expresses to check max daily request allowance limit per user
+	MaxDailyAllowancePerUser int = 5
+
+	// MinTransactionAmount is a fraud control param expresses to check min daily total transaction allowance limit per user
+	MinTransactionAmount float64 = 50.0
+
+	// MaxTransactionAmount is a fraud control param expresses to check max daily total transaction allowance limit per user
+	MaxTransactionAmount float64 = 1000.0
+)
 
 // Redis pub/sub channel names
 const (

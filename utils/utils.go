@@ -3,8 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"fraud-service/model"
-	"sort"
 )
 
 func CheckError(err error) {
@@ -14,28 +12,38 @@ func CheckError(err error) {
 	}
 }
 
-type rulesetList []model.RuleSet
-
-func (ruleset rulesetList) Len() int {
-	return len(ruleset)
-}
-
-func (ruleset rulesetList) Less(i, j int) bool {
-	return ruleset[i].Priority < ruleset[j].Priority
-}
-
-func (ruleset rulesetList) Swap(i, j int) {
-	ruleset[i], ruleset[j] = ruleset[j], ruleset[i]
-}
-
-func SortRuleSetsByPriority(payload *model.RuleSetPayload) {
-	sort.Sort(rulesetList(payload.Data))
-}
-
 func Struct2Map(obj interface{}) map[string]interface{} {
 	var mappedObj map[string]interface{}
-	inrec, _ := json.Marshal(obj)
-	json.Unmarshal(inrec, &mappedObj)
+	inRec, _ := json.Marshal(obj)
+	json.Unmarshal(inRec, &mappedObj)
 
 	return mappedObj
+}
+
+func Intersection(s1, s2 []string) (inter []string) {
+	hash := make(map[string]bool)
+	for _, e := range s1 {
+		hash[e] = true
+	}
+	for _, e := range s2 {
+		// If elements present in the hashmap then append intersection list.
+		if hash[e] {
+			inter = append(inter, e)
+		}
+	}
+	//Remove dups from slice.
+	inter = removeDups(inter)
+	return
+}
+
+//Remove dups from slice.
+func removeDups(elements []string) (nodups []string) {
+	encountered := make(map[string]bool)
+	for _, element := range elements {
+		if !encountered[element] {
+			nodups = append(nodups, element)
+			encountered[element] = true
+		}
+	}
+	return
 }

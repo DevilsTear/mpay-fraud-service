@@ -6,7 +6,6 @@ import (
 	"fraud-service/model"
 	"fraud-service/rules"
 	rulesets "fraud-service/ruleset"
-	"fraud-service/utils"
 	"log"
 	"net/http"
 )
@@ -24,6 +23,12 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 
 	switch endpoint {
 	case config.FRAUD_ENDPOINT:
+		resPayload := model.ResponsePayload{
+			Status:  model.SuccessResponse,
+			Code:    http.StatusOK,
+			Message: "Success",
+			Data:    true,
+		}
 		var payload model.RequestPayload
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		if err != nil {
@@ -32,23 +37,25 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 		}
 
 		// Fraud checks
-		isPassed, err := rules.EvaluateRules(&payload)
+		requestPayloadInstance := rules.GetRequestPayloadInstance()
+		requestPayloadInstance.SetPayload(payload)
+		isPassed, err := requestPayloadInstance.ProcessRules()
 		if err != nil || !isPassed {
 			log.Println(err)
-			resPayload = model.ResponsePayload{
-				Status:  model.FailResponse,
-				Code:    -100,
-				Message: "Fail",
-				Data:    isPassed,
-			}
+			resPayload.Status = model.FailResponse
+			resPayload.Code = -100
+			resPayload.Message = "Fail"
+			resPayload.Data = isPassed
 		}
 
-		resPayload = model.ResponsePayload{
-			Status:  model.SuccessResponse,
-			Code:    http.StatusOK,
-			Message: "Success",
-			Data:    isPassed,
-		}
+		//isPassed, err = rules.EvaluateRules(&payload)
+		//if err != nil || !isPassed {
+		//	log.Println(err)
+		//	resPayload.Status = model.FailResponse
+		//	resPayload.Code = -100
+		//	resPayload.Message = "Fail"
+		//	resPayload.Data = isPassed
+		//}
 	case config.RULES_ENDPOINT:
 		var payload model.RuleSetPayload
 		err := json.NewDecoder(r.Body).Decode(&payload)
@@ -60,10 +67,10 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 			log.Println(err)
 		}
 		log.Println(payload)
-		utils.SortRuleSetsByPriority(&payload)
 		// log.Println(payload)
 		activeRules := rulesets.GetInstance()
 		activeRules.SetPayload(payload.Data)
+		activeRules.SortRuleSetsByPriority()
 		// log.Println(activeRules.GetPayload())
 		resPayload = model.ResponsePayload{
 			Status:  model.SuccessResponse,

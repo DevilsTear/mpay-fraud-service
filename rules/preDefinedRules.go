@@ -98,6 +98,30 @@ func (payload *requestPayload) checkCardBIN() (bool, error) {
 	return true, nil
 }
 
+func (payload *requestPayload) getCardBINIca() (string, error) {
+	bankIca := ""
+	cardNumber := &payload.Data.Transaction.CardNumber
+	*cardNumber = strings.Trim(*cardNumber, " ")
+	if *cardNumber == "" {
+		return bankIca, errors.New("card number is empty")
+	}
+
+	cardBin := (*cardNumber)[:6]
+	tx := config.MySqlDB.Raw("SELECT bankIca as binExists FROM cc_binlist WHERE card_bin = ? LIMIT 1", cardBin).
+		Scan(&bankIca)
+
+	if tx.Error != nil || bankIca == "" {
+		errString := "card issuer is not listed in the bin list!"
+		if tx.Error != nil {
+			errString += fmt.Sprintf("\nError Details: %v", tx.Error)
+		}
+
+		return bankIca, errors.New(errString)
+	}
+
+	return bankIca, nil
+}
+
 func (payload *requestPayload) checkThreeUniqueCardsAllowed() (bool, error) {
 	cardAllowance := false
 	tckn := &payload.Data.User.TCKN
@@ -270,6 +294,41 @@ func (payload *requestPayload) getUserFraudRecord() (model.CreditCardFraud, erro
 	}
 
 	return creditCardFraud, nil
+}
+
+func (payload *requestPayload) checkOneCardPerBank() (bool, error) {
+	tckn := &payload.Data.User.TCKN
+	*tckn = strings.Trim(*tckn, " ")
+	cardNumber := &payload.Data.Transaction.CardNumber
+	*cardNumber = strings.Trim(*cardNumber, " ")
+	if *tckn == "" {
+		return false, errors.New("card number is empty")
+	}
+	bankIca, err := payload.getCardBINIca()
+	if err != nil {
+		return false, err
+	}
+
+	cryptedCC := ""
+	tx := config.MySqlDB.Raw(`SELECT ccb.bank_ica , rjr.crypted_cc AS crypted_cc
+        FROM request_jetpay_registrations AS rjr 
+			INNER JOIN request AS r ON rjr.request_id = r.ID 
+			INNER JOIN cc_binlist AS ccb ON ccb.card_bin = rjr.card_bin 
+        AND rjr.created_at >= ? 
+		AND user_tckn = ? 
+		AND ccb.bank_ica = ? 
+		AND r.Status = 1 GROUP BY ccb.bank_ica, rjr.crypted_cc LIMIT 1`,
+		"\"2022-04-05 08:00:00\"", *tckn, bankIca).Scan(&cryptedCC)
+	if tx.Error != nil {
+		return false, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+	}
+
+	cryptedCard := utils.GetMD5Hash(utils.GetMD5Hash(*cardNumber))
+	if cryptedCC == cryptedCard {
+		return false, errors.New("only one unique card per bank is permitted")
+	}
+
+	return true, nil
 }
 
 func (payload *requestPayload) checkPendingCountThreshold() (bool, error) {

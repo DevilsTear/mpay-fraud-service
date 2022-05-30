@@ -108,3 +108,16 @@ type ResponsePayload struct {
 	Code    int
 	Message string
 }
+
+type CreditCardFraud struct {
+	ClientId              int64  `json:"client_id"`
+	UserId                string `json:"user_id"`
+	UserName              string `json:"username"`
+	TCKN                  string `json:"tckn"`
+	Breached              int64  `json:"breached"`
+	PendingCount          int64  `json:"pending_count"`
+	Date                  string `json:"date"`
+	InitialFifteenCount   int64  `json:"initial_fifteen_count"`
+	FifteenCleared        int64  `json:"fifteen_cleared"`
+	FifteenNeedsClearance int64  `json:"fifteen_needs_clearance"`
+}

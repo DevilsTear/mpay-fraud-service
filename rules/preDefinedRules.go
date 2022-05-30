@@ -123,20 +123,25 @@ func (payload *requestPayload) getCardBINIca() (string, error) {
 }
 
 func (payload *requestPayload) checkThreeUniqueCardsAllowed() (bool, error) {
-	cardAllowance := false
+	cardNumber := &payload.Data.Transaction.CardNumber
+	*cardNumber = strings.Trim(*cardNumber, " ")
+	if *cardNumber == "" {
+		return false, errors.New("card number is empty")
+	}
 	tckn := &payload.Data.User.TCKN
 	*tckn = strings.Trim(*tckn, " ")
 	if *tckn == "" {
 		return false, errors.New("tckn is empty")
 	}
-
-	tx := config.MySqlDB.Raw(`SELECT COUNT(1) < ? AS cardAllowance FROM request_jetpay_registrations AS rjr 
+	var rowCount int64
+	var cryptedCCs []string
+	tx := config.MySqlDB.Raw(`SELECT rjr.crypted_cc FROM request_jetpay_registrations AS rjr 
 			INNER JOIN request AS r ON rjr.request_id = r.ID 
 			WHERE created_at >= CAST(CURDATE() AS DATETIME) 
 			AND created_at <= DATE_SUB(CAST(DATE_ADD(CURDATE(), INTERVAL 1 DAY) AS DATETIME), INTERVAL 1 SECOND) 
-			AND user_tckn = ? AND r.Status = 1 GROUP BY rjr.crypted_cc`, 3, *tckn).
-		Scan(&cardAllowance)
+			AND user_tckn = ? AND r.Status = 1 GROUP BY rjr.crypted_cc`, 3, *tckn).Scan(&cryptedCCs).Count(&rowCount)
 
+	cardAllowance := rowCount <= 3
 	if tx.Error != nil || !cardAllowance {
 		errString := "daily card allowance limit reached!"
 		if tx.Error != nil {
@@ -144,6 +149,13 @@ func (payload *requestPayload) checkThreeUniqueCardsAllowed() (bool, error) {
 		}
 
 		return false, errors.New(errString)
+	}
+
+	cryptedCard := utils.GetMD5Hash(utils.GetMD5Hash(*cardNumber))
+	for _, cryptedCC := range cryptedCCs {
+		if cryptedCard == cryptedCC {
+			return true, nil
+		}
 	}
 
 	return true, nil
@@ -326,6 +338,34 @@ func (payload *requestPayload) checkOneCardPerBank() (bool, error) {
 	cryptedCard := utils.GetMD5Hash(utils.GetMD5Hash(*cardNumber))
 	if cryptedCC == cryptedCard {
 		return false, errors.New("only one unique card per bank is permitted")
+	}
+
+	return true, nil
+}
+
+func (payload *requestPayload) checkOneTcknPerUser() (bool, error) {
+	tckn := &payload.Data.User.TCKN
+	*tckn = strings.Trim(*tckn, " ")
+	if *tckn == "" {
+		return false, errors.New("card number is empty")
+	}
+	userId := &payload.Data.User.UserId
+	clientId := &payload.Data.ClientId
+	*userId = strings.Trim(*userId, " ")
+	*clientId = strings.Trim(*clientId, " ")
+	if *clientId == "" || *userId == "" {
+		return false, errors.New("clientId and/or userId is empty")
+	}
+
+	recTCKN := ""
+	tx := config.MySqlDB.Raw(`SELECT tckn FROM cc_fraud WHERE user_id = ? AND client_id =  LIMIT 1`,
+		*userId, clientId).Scan(&recTCKN)
+	if tx.Error != nil {
+		return false, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+	}
+
+	if recTCKN == *tckn {
+		return false, errors.New("user is only allowed to perform transactions with a single tckn")
 	}
 
 	return true, nil

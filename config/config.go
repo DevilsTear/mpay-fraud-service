@@ -15,17 +15,28 @@ import (
 
 // LoadInitials sets application specific global settings
 func LoadInitials(ctx context.Context) {
-	LoadRedisSettings(ctx)
-	LoadMySQLSettings(ctx)
+	err := LoadRedisSettings(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	err = LoadMySQLSettings(ctx)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // LoadRedisSettings sets Redis settings on a global scope
-func LoadRedisSettings(ctx context.Context) {
+func LoadRedisSettings(ctx context.Context) error {
 	redisConfigFile, err := os.Open("config/redisSettings.json")
 	utils.CheckError(err)
 	byteValue, err := ioutil.ReadAll(redisConfigFile)
 	utils.CheckError(err)
-	json.Unmarshal(byteValue, &RedisConfig)
+	err = json.Unmarshal(byteValue, &RedisConfig)
+	if err != nil {
+		return fmt.Errorf("an error occured! Error Details: %v", err)
+	}
+
 	defer redisConfigFile.Close()
 
 	client := redis.NewClient(&redis.Options{
@@ -39,6 +50,8 @@ func LoadRedisSettings(ctx context.Context) {
 	}
 
 	RedisClient = *client
+
+	return nil
 }
 
 // CheckRedisServer checks if Redis server is ready and responding
@@ -54,12 +67,15 @@ func CheckRedisServer(ctx context.Context, client *redis.Client) error {
 }
 
 // LoadMySQLSettings sets MySql settings on a global scope
-func LoadMySQLSettings(ctx context.Context) {
+func LoadMySQLSettings(ctx context.Context) error {
 	mysqlConfigFile, err := os.Open("config/mysqlSettings.json")
 	utils.CheckError(err)
 	byteValue, err := ioutil.ReadAll(mysqlConfigFile)
 	utils.CheckError(err)
-	json.Unmarshal(byteValue, &MySQLConfig)
+	err = json.Unmarshal(byteValue, &MySQLConfig)
+	if err != nil {
+		return fmt.Errorf("an error occured! Error Details: %v", err)
+	}
 	defer mysqlConfigFile.Close()
 
 	db, err := CheckMySQLServer()
@@ -68,6 +84,8 @@ func LoadMySQLSettings(ctx context.Context) {
 	}
 
 	MySQLDb = *db
+
+	return nil
 }
 
 // CheckMySQLServer checks if MySql server is ready and responding

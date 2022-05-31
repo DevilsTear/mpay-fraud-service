@@ -3,6 +3,7 @@ package endpoint
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"fraud-service/model"
 	"net/http"
 	"net/http/httptest"
@@ -15,7 +16,10 @@ func TestRulesEndpoint(t *testing.T) {
 	}
 
 	rulesPayload := model.RuleSetPayload{}
-	json.Unmarshal([]byte(reqRulesJSON), &rulesPayload)
+	err := json.Unmarshal([]byte(reqRulesJSON), &rulesPayload)
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	reqBody, _ := json.Marshal(rulesPayload)
 
@@ -29,7 +33,7 @@ func TestRulesEndpoint(t *testing.T) {
 	}
 
 	rulesResponsePayload := model.RuleSetPayload{}
-	err := json.Unmarshal(w.Body.Bytes(), &rulesResponsePayload)
+	err = json.Unmarshal(w.Body.Bytes(), &rulesResponsePayload)
 	if err != nil {
 		t.Log(err)
 		t.Log(w.Body.String())
@@ -43,7 +47,11 @@ func TestFraudEndpoint(t *testing.T) {
 	}
 
 	reqPayload := model.RequestPayload{}
-	json.Unmarshal([]byte(reqFraudJSON), &reqPayload)
+	err := json.Unmarshal([]byte(reqFraudJSON), &reqPayload)
+	if err != nil {
+		t.Log(err)
+		t.Error("Unexpected response, test failed!")
+	}
 
 	reqBody, _ := json.Marshal(reqPayload)
 

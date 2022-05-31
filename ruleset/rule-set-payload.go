@@ -2,6 +2,7 @@ package ruleset
 
 import (
 	"errors"
+	"fmt"
 	model "fraud-service/model"
 	"sort"
 	"sync"
@@ -22,20 +23,25 @@ func GetInstance() *ruleSetPayload {
 }
 
 // SetPayload sets ruleset slice to the instance
-func (payload *ruleSetPayload) SetPayload(data []model.RuleSet) {
+func (payload *ruleSetPayload) SetPayload(data []model.RuleSet) (err error) {
 	payload.Lock()
 	defer payload.Unlock()
-	payload.Data = filterActiveOnes(data)
+	payload.Data, err = filterActiveOnes(data)
+
+	return
 }
 
 // GetPayload gets ruleset slice from the instance
-func (payload *ruleSetPayload) GetPayload() []model.RuleSet {
+func (payload *ruleSetPayload) GetPayload() (out []model.RuleSet) {
 	payload.RLock()
 	defer payload.RUnlock()
 	return payload.Data
 }
 
-func filterActiveOnes(rules []model.RuleSet) (out []model.RuleSet) {
+func filterActiveOnes(rules []model.RuleSet) (out []model.RuleSet, err error) {
+	if len(rules) <= 0 {
+		err = fmt.Errorf("rules object empty")
+	}
 	for i := range rules {
 		if rules[i].Status {
 			out = append(out, rules[i])

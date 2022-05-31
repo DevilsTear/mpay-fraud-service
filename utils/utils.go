@@ -16,12 +16,14 @@ func CheckError(err error) {
 }
 
 // Struct2Map transform struct interface to map
-func Struct2Map(obj interface{}) map[string]interface{} {
+func Struct2Map(obj interface{}) (map[string]interface{}, error) {
 	var mappedObj map[string]interface{}
 	inRec, _ := json.Marshal(obj)
-	json.Unmarshal(inRec, &mappedObj)
+	if err := json.Unmarshal(inRec, &mappedObj); err != nil {
+		return nil, err
+	}
 
-	return mappedObj
+	return mappedObj, nil
 }
 
 // Intersection returns intersection of two slices

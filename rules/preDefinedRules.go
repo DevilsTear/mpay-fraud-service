@@ -38,16 +38,16 @@ func (payload *requestPayload) GetPayload() model.RequestPayload {
 func (payload *requestPayload) ProcessRules() (bool, error) {
 	ruleSets := rulesets.GetInstance().GetPayload()
 	isOK := false
-	var err error = nil
+	var err error
 	if !anyRuleExists(ruleSets) {
 		return false, errors.New("please, define your rule sets first")
 	}
 
-	if isOK, err = payload.checkCardBIN(); err != nil {
+	if isOK, err = payload.checkCardBIN(); !isOK || err != nil {
 		return false, fmt.Errorf("%v check is failed!\nError Details: %v", "checkCardBIN", err)
 	}
 
-	if isOK, err = payload.checkThreeUniqueCardsAllowed(); err != nil {
+	if _, err = payload.checkThreeUniqueCardsAllowed(); !isOK || err != nil {
 		return false, fmt.Errorf("%v check is failed!\nError Details: %v", "checkThreeUniqueCardsAllowed", err)
 	}
 
@@ -259,34 +259,36 @@ func incrementFifteenCount(clientID *string, userID *string) (bool, error) {
 	}
 
 	if fraudRecord.InitialFifteenCount == 14 {
-		changeUserPermExternal(clientID, userID, 0)
+		if err := changeUserPermExternal(clientID, userID, 0); err != nil {
+			return false, fmt.Errorf("error Details: %v", err)
+		}
 		tx := config.MySQLDb.Exec(`"UPDATE cc_fraud SET fifteen_needs_clearance = 1 WHERE client_id = ? AND user_id = ?`, *clientID, *userID)
 		if tx.Error != nil {
-			return false, fmt.Errorf("\nError Details: %v", tx.Error)
+			return false, fmt.Errorf("error Details: %v", tx.Error)
 		}
 	}
 
 	return true, nil
 }
 
-func changeUserPermExternal(clientID *string, userID *string, privillage int64) (bool, error) {
+func changeUserPermExternal(clientID *string, userID *string, privillage int64) error {
 	tx := config.MySQLDb.Exec(`"UPDATE cc_client_users SET privilege = ? WHERE client_id = ? AND user_id = ?`, privillage, *clientID, *userID)
 	if tx.Error != nil {
-		return false, fmt.Errorf("\nError Details: %v", tx.Error)
+		return fmt.Errorf("\nError Details: %v", tx.Error)
 	}
-	return true, nil
+	return nil
 }
 
-func (payload *requestPayload) changeUserPerm(privillage string) (bool, error) {
+func (payload *requestPayload) changeUserPerm(privillage string) error {
 	userID := &payload.Data.User.UserID
 	clientID := &payload.Data.ClientID
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	tx := config.MySQLDb.Exec(`"UPDATE cc_client_users SET privilege = ? WHERE client_id = ? AND user_id = ?`, privillage, *clientID, *userID)
 	if tx.Error != nil {
-		return false, fmt.Errorf("\nError Details: %v", tx.Error)
+		return fmt.Errorf("\nError Details: %v", tx.Error)
 	}
-	return true, nil
+	return nil
 }
 
 func (payload *requestPayload) getUserFraudRecord() (model.CreditCardFraud, error) {

@@ -2,6 +2,7 @@ package endpoint
 
 import (
 	"encoding/json"
+	"fmt"
 	"fraud-service/config"
 	"fraud-service/model"
 	"fraud-service/rules"
@@ -70,8 +71,16 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 		log.Println(payload)
 		// log.Println(payload)
 		activeRules := rulesets.GetInstance()
-		activeRules.SetPayload(payload.Data)
-		activeRules.SortRuleSetsByPriority()
+		err = activeRules.SetPayload(payload.Data)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = activeRules.SortRuleSetsByPriority()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		// log.Println(activeRules.GetPayload())
 		resPayload = model.ResponsePayload{
 			Status:  model.SuccessResponse,
@@ -84,5 +93,8 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 	w.Header().Set("Content-Type", "application/json")
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resPayload)
+	err := json.NewEncoder(w).Encode(resPayload)
+	if err != nil {
+		fmt.Printf("an error occurred while writing json to the http response writer! Error Details: %v\n", err)
+	}
 }

@@ -3,10 +3,10 @@ package pubsub
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"fraud-service/config"
 	"fraud-service/model"
 	rulesets "fraud-service/ruleset"
-	"log"
 )
 
 // PublishEvent method publishes a new event to the appropriate Redis channel
@@ -32,13 +32,25 @@ func SubscribeEvent(ctx context.Context, redisSubChan string) {
 		switch redisSubChan {
 		case config.SubRuleSetChanged:
 			rulesetPayload := model.RuleSetPayload{}
-			json.Unmarshal(payload, &rulesetPayload)
-			log.Println(rulesetPayload)
+			err := json.Unmarshal(payload, &rulesetPayload)
+			if err != nil {
+				fmt.Printf("an error occured! Error Details: %v\n", err)
+				break
+			}
+			//log.Println(rulesetPayload)
 			activeRules := rulesets.GetInstance()
-			activeRules.SetPayload(rulesetPayload.Data)
-			activeRules.SortRuleSetsByPriority()
-			log.Println(rulesetPayload)
-			log.Println(activeRules.GetPayload())
+			err = activeRules.SetPayload(rulesetPayload.Data)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			err = activeRules.SortRuleSetsByPriority()
+			if err != nil {
+				fmt.Printf("an error occured! Error Details: %v\n", err)
+				break
+			}
+			//log.Println(rulesetPayload)
+			//log.Println(activeRules.GetPayload())
 			//config.ChannelRuleSetPayload <- activeRules.Data
 			// default:
 			// 	break sub_loop

@@ -3,13 +3,10 @@ package rules
 import (
 	"fmt"
 	"fraud-service/model"
-	rulesets "fraud-service/ruleset"
 	"fraud-service/utils"
 
 	"github.com/nikunjy/rules/parser"
 )
-
-var activeRules = rulesets.GetInstance()
 
 func evaluate(rule string, items map[string]interface{}) (retVal bool, retErr error) {
 	defer func() {
@@ -30,8 +27,8 @@ func EvaluateRules(payload *model.RequestPayload) (bool, error) {
 	if payload == nil {
 		return false, fmt.Errorf("%q", recover())
 	}
-	mappedPayload := utils.Struct2Map(&payload)
-	if mappedPayload == nil {
+	mappedPayload, err := utils.Struct2Map(&payload)
+	if err != nil || mappedPayload == nil {
 		return false, fmt.Errorf("%q", recover())
 	}
 

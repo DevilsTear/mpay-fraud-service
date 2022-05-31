@@ -25,6 +25,7 @@ func evaluate(rule string, items map[string]interface{}) (retVal bool, retErr er
 	return ev.Process(items)
 }
 
+// EvaluateRules triggers the generic rule engine
 func EvaluateRules(payload *model.RequestPayload) (bool, error) {
 	if payload == nil {
 		return false, fmt.Errorf("%q", recover())

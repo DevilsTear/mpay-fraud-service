@@ -16,14 +16,14 @@ var addr = flag.String("addr", ":8080", "http service address")
 
 func main() {
 	config.LoadInitials(ctx)
-	go pubsub.SubscribeEvent(ctx, config.SUB_RULE_SET_CHANGED)
+	go pubsub.SubscribeEvent(ctx, config.SubRuleSetChanged)
 
-	http.HandleFunc("/"+config.FRAUD_ENDPOINT, func(w http.ResponseWriter, r *http.Request) {
-		endpoint.ServeEndpoint(w, r, config.FRAUD_ENDPOINT)
+	http.HandleFunc("/"+config.FraudEndpoint, func(w http.ResponseWriter, r *http.Request) {
+		endpoint.ServeEndpoint(w, r, config.FraudEndpoint)
 	})
 
-	http.HandleFunc("/"+config.RULES_ENDPOINT, func(w http.ResponseWriter, r *http.Request) {
-		endpoint.ServeEndpoint(w, r, config.RULES_ENDPOINT)
+	http.HandleFunc("/"+config.RulesEndpoint, func(w http.ResponseWriter, r *http.Request) {
+		endpoint.ServeEndpoint(w, r, config.RulesEndpoint)
 	})
 
 	err := http.ListenAndServe(*addr, nil)

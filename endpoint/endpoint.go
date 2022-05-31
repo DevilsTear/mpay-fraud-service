@@ -10,6 +10,7 @@ import (
 	"net/http"
 )
 
+// ServeEndpoint includes listeners for HTTP connections
 func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -22,7 +23,7 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 	}
 
 	switch endpoint {
-	case config.FRAUD_ENDPOINT:
+	case config.FraudEndpoint:
 		resPayload := model.ResponsePayload{
 			Status:  model.SuccessResponse,
 			Code:    http.StatusOK,
@@ -56,7 +57,7 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 		//	resPayload.Message = "Fail"
 		//	resPayload.Data = isPassed
 		//}
-	case config.RULES_ENDPOINT:
+	case config.RulesEndpoint:
 		var payload model.RuleSetPayload
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		if err != nil {

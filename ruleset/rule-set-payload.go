@@ -16,16 +16,19 @@ type rulesetList []model.RuleSet
 
 var instance ruleSetPayload
 
+// GetInstance constructs ruleset payload instance
 func GetInstance() *ruleSetPayload {
 	return &instance
 }
 
+// SetPayload sets ruleset slice to the instance
 func (payload *ruleSetPayload) SetPayload(data []model.RuleSet) {
 	payload.Lock()
 	defer payload.Unlock()
 	payload.Data = filterActiveOnes(data)
 }
 
+// GetPayload gets ruleset slice from the instance
 func (payload *ruleSetPayload) GetPayload() []model.RuleSet {
 	payload.RLock()
 	defer payload.RUnlock()

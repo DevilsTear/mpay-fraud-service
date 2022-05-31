@@ -12,9 +12,9 @@ import (
 // PublishEvent method publishes a new event to the appropriate Redis channel
 func PublishEvent(ctx context.Context, eventType string, payload interface{}) {
 	switch eventType {
-	case config.PUB_BLACK_LIST:
-	case config.PUB_CLEAR_COUNTER:
-	case config.PUB_INCREASE_COUNTER:
+	case config.PubBlackList:
+	case config.PubClearCounter:
+	case config.PubIncreaseCounter:
 		if pubPayload, err := json.Marshal(payload); err == nil {
 			config.RedisClient.Publish(ctx, eventType, pubPayload)
 		}
@@ -30,7 +30,7 @@ func SubscribeEvent(ctx context.Context, redisSubChan string) {
 	for {
 		payload := receiveMessage(ctx, redisSubChan)
 		switch redisSubChan {
-		case config.SUB_RULE_SET_CHANGED:
+		case config.SubRuleSetChanged:
 			rulesetPayload := model.RuleSetPayload{}
 			json.Unmarshal(payload, &rulesetPayload)
 			log.Println(rulesetPayload)
@@ -39,7 +39,7 @@ func SubscribeEvent(ctx context.Context, redisSubChan string) {
 			activeRules.SortRuleSetsByPriority()
 			log.Println(rulesetPayload)
 			log.Println(activeRules.GetPayload())
-			config.ChannelRuleSetPayload <- activeRules.Data
+			//config.ChannelRuleSetPayload <- activeRules.Data
 			// default:
 			// 	break sub_loop
 		}

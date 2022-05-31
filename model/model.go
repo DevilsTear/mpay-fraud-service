@@ -1,7 +1,9 @@
 package model
 
+// OperatorType is comparison operator enum used to handle rule check
 type OperatorType string
 
+// Operator types for comparison
 const (
 	eq  OperatorType = "=="         // equals to
 	ne  OperatorType = "!="         // not equals to
@@ -17,6 +19,7 @@ const (
 	not OperatorType = "not"        // not of a logical expression
 )
 
+// RuleSet holds rule settings struct
 type RuleSet struct {
 	Name     string      `json:"name"`
 	Key      string      `json:"key"` // bounded with the rule
@@ -27,19 +30,22 @@ type RuleSet struct {
 	Operator OperatorType `json:"operator"`
 }
 
+// RuleSetPayload holds rule settings array
 type RuleSetPayload struct {
 	Data []RuleSet `json:"data"`
 }
 
+// RequestPayload holds payload struct which used for fraud detection
 type RequestPayload struct {
-	ClientId    string             `json:"client_id"`
+	ClientID    string             `json:"client_id"`
 	Transaction RequestTransaction `json:"data"`
 	User        RequestUser        `json:"user"`
 }
 
+// RequestTransaction holds transaction struct which used for fraud detection
 type RequestTransaction struct {
 	Amount          string `json:"amount"`
-	TransactionId   string `json:"trx"`
+	TransactionID   string `json:"trx"`
 	CardNumber      string `json:"card_number"`
 	ExpirationMonth string `json:"expiration_month"`
 	ExpirationYear  string `json:"expiration_year"`
@@ -48,8 +54,9 @@ type RequestTransaction struct {
 	ReturnURL       string `json:"return_url"`
 }
 
+// RequestUser holds user struct which used for fraud detection
 type RequestUser struct {
-	UserId      string `json:"userID"`
+	UserID      string `json:"userID"`
 	Username    string `json:"username"`
 	YearOdBirth string `json:"yearofbirth"`
 	FullName    string `json:"fullname"`
@@ -58,13 +65,15 @@ type RequestUser struct {
 	IPAddress   string `json:"ip_address"`
 }
 
+// RedisConfig holds redis config struct
 type RedisConfig struct {
 	Address  string `json:"address"`
 	Password string `json:"password"`
 	DB       int    `json:"db"`
 }
 
-type MySqlConfig struct {
+// MySQLConfig holds mysql config struct
+type MySQLConfig struct {
 	// data source name
 	// "gorm:gorm@tcp(127.0.0.1:3306)/gorm?charset=utf8&parseTime=True&loc=Local",
 	DSN string `json:"dns"`
@@ -94,14 +103,17 @@ type MySqlConfig struct {
 	SkipInitializeWithVersion bool `json:"skip_initialize_with_version"`
 }
 
+// ResponseType is response enum used to handle response status
 type ResponseType string
 
+// PreDefined response types
 const (
 	SuccessResponse ResponseType = "success"
 	FailResponse    ResponseType = "fail"
 	ErrorResponse   ResponseType = "error"
 )
 
+// ResponsePayload holds response payload used to response all HTTP requests
 type ResponsePayload struct {
 	Status  ResponseType
 	Data    interface{}
@@ -109,9 +121,10 @@ type ResponsePayload struct {
 	Message string
 }
 
+// CreditCardFraud holds related table data
 type CreditCardFraud struct {
-	ClientId              int64  `json:"client_id"`
-	UserId                string `json:"user_id"`
+	ClientID              int64  `json:"client_id"`
+	UserID                string `json:"user_id"`
 	UserName              string `json:"username"`
 	TCKN                  string `json:"tckn"`
 	Breached              int64  `json:"breached"`

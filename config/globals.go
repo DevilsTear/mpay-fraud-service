@@ -8,16 +8,20 @@ import (
 )
 
 var (
+	// RedisConfig holds global Redis config settings
 	RedisConfig model.RedisConfig
+	// RedisClient holds global scope Redis Client
 	RedisClient redis.Client
 )
 
 var (
-	MySqlConfig model.MySqlConfig
-	MySqlDB     gorm.DB
+	// MySQLConfig holds global MySQL config settings
+	MySQLConfig model.MySQLConfig
+	// MySQLDb holds global scope Gorm Instance
+	MySQLDb gorm.DB
 )
 
-var ChannelRuleSetPayload = make(chan []model.RuleSet)
+//var ChannelRuleSetPayload = make(chan []model.RuleSet)
 
 var (
 	// PendingCountThreshold is a fraud control param expresses to check pending request counts
@@ -41,13 +45,14 @@ var (
 
 // Redis pub/sub channel names
 const (
-	SUB_RULE_SET_CHANGED = "fraud:rule_sets_changed"
-	PUB_BLACK_LIST       = "fraud:blacklist"
-	PUB_CLEAR_COUNTER    = "fraud:clear_counter"
-	PUB_INCREASE_COUNTER = "fraud:increase_counter"
+	SubRuleSetChanged  = "fraud:rule_sets_changed"
+	PubBlackList       = "fraud:blacklist"
+	PubClearCounter    = "fraud:clear_counter"
+	PubIncreaseCounter = "fraud:increase_counter"
 )
 
+// HTTP endpoints
 const (
-	FRAUD_ENDPOINT = "fraud"
-	RULES_ENDPOINT = "rules"
+	FraudEndpoint = "fraud"
+	RulesEndpoint = "rules"
 )

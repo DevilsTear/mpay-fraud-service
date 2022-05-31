@@ -18,6 +18,7 @@ type requestPayload struct {
 
 var instance requestPayload
 
+// GetRequestPayloadInstance constructs request payload instance
 func GetRequestPayloadInstance() *requestPayload {
 	return &instance
 }
@@ -43,11 +44,11 @@ func (payload *requestPayload) ProcessRules() (bool, error) {
 	}
 
 	if isOK, err = payload.checkCardBIN(); err != nil {
-		return false, errors.New(fmt.Sprintf("%v check is failed!\nError Details: %v", "checkCardBIN", err))
+		return false, fmt.Errorf("%v check is failed!\nError Details: %v", "checkCardBIN", err)
 	}
 
 	if isOK, err = payload.checkThreeUniqueCardsAllowed(); err != nil {
-		return false, errors.New(fmt.Sprintf("%v check is failed!\nError Details: %v", "checkThreeUniqueCardsAllowed", err))
+		return false, fmt.Errorf("%v check is failed!\nError Details: %v", "checkThreeUniqueCardsAllowed", err)
 	}
 
 	for _, ruleSet := range ruleSets {
@@ -68,7 +69,7 @@ func (payload *requestPayload) ProcessRules() (bool, error) {
 		}
 
 		if !isOK || err != nil {
-			return false, errors.New(fmt.Sprintf("%v check is failed!\nError Details: %v", ruleSet.Key, err))
+			return false, fmt.Errorf("%v check is failed!\nError Details: %v", ruleSet.Key, err)
 		}
 	}
 	return true, nil
@@ -83,7 +84,7 @@ func (payload *requestPayload) checkCardBIN() (bool, error) {
 	}
 
 	cardBin := (*cardNumber)[:6]
-	tx := config.MySqlDB.Raw("SELECT 1 as binExists FROM cc_binlist WHERE card_bin = ? LIMIT 1", cardBin).
+	tx := config.MySQLDb.Raw("SELECT 1 as binExists FROM cc_binlist WHERE card_bin = ? LIMIT 1", cardBin).
 		Scan(&binExists)
 
 	if tx.Error != nil || !binExists {
@@ -107,7 +108,7 @@ func (payload *requestPayload) getCardBINIca() (string, error) {
 	}
 
 	cardBin := (*cardNumber)[:6]
-	tx := config.MySqlDB.Raw("SELECT bankIca as binExists FROM cc_binlist WHERE card_bin = ? LIMIT 1", cardBin).
+	tx := config.MySQLDb.Raw("SELECT bankIca as binExists FROM cc_binlist WHERE card_bin = ? LIMIT 1", cardBin).
 		Scan(&bankIca)
 
 	if tx.Error != nil || bankIca == "" {
@@ -135,7 +136,7 @@ func (payload *requestPayload) checkThreeUniqueCardsAllowed() (bool, error) {
 	}
 	var rowCount int64
 	var cryptedCCs []string
-	tx := config.MySqlDB.Raw(`SELECT rjr.crypted_cc FROM request_jetpay_registrations AS rjr 
+	tx := config.MySQLDb.Raw(`SELECT rjr.crypted_cc FROM request_jetpay_registrations AS rjr 
 			INNER JOIN request AS r ON rjr.request_id = r.ID 
 			WHERE created_at >= CAST(CURDATE() AS DATETIME) 
 			AND created_at <= DATE_SUB(CAST(DATE_ADD(CURDATE(), INTERVAL 1 DAY) AS DATETIME), INTERVAL 1 SECOND) 
@@ -163,15 +164,15 @@ func (payload *requestPayload) checkThreeUniqueCardsAllowed() (bool, error) {
 
 func (payload *requestPayload) checkFifteenCountClearance() (bool, error) {
 	fifteenNeedsClearance := false
-	userId := &payload.Data.User.UserId
-	clientId := &payload.Data.ClientId
-	*userId = strings.Trim(*userId, " ")
-	*clientId = strings.Trim(*clientId, " ")
-	if *userId == "" || *clientId == "" {
-		return false, errors.New("userId and/or clientId is empty")
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	if *userID == "" || *clientID == "" {
+		return false, errors.New("userID and/or clientID is empty")
 	}
 
-	tx := config.MySqlDB.Raw(`SELECT fifteenNeedsClearance FROM cc_fraud WHERE user_id = ? AND client_id = ?`, *userId, *clientId).
+	tx := config.MySQLDb.Raw(`SELECT fifteenNeedsClearance FROM cc_fraud WHERE user_id = ? AND client_id = ?`, *userID, *clientID).
 		Scan(&fifteenNeedsClearance)
 
 	if tx.Error != nil || fifteenNeedsClearance {
@@ -189,7 +190,7 @@ func (payload *requestPayload) checkFifteenCountClearance() (bool, error) {
 func (payload *requestPayload) checkOneApprovedAllowedByThirtyMinuteInterval() (bool, error) {
 	allowance := false
 	tckn := &payload.Data.User.TCKN
-	userId := &payload.Data.User.UserId
+	userID := &payload.Data.User.UserID
 	sid := 0
 	fullName := &payload.Data.User.FullName
 	*tckn = strings.Trim(*tckn, " ")
@@ -197,13 +198,13 @@ func (payload *requestPayload) checkOneApprovedAllowedByThirtyMinuteInterval() (
 		return false, errors.New("tckn is empty")
 	}
 
-	tx := config.MySqlDB.Raw(`SELECT
+	tx := config.MySQLDb.Raw(`SELECT
       COUNT(1) == 0 AS allowance
 	  FROM
 		  request r
 		  INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
 	  WHERE Status = 1 AND payment_method = 5 AND (StartDate > DATE_SUB(NOW(), INTERVAL 30 MINUTE)) AND 
-		((r.SID = ? AND r.UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))`, sid, *userId, fullName, *tckn).
+		((r.SID = ? AND r.UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))`, sid, *userID, fullName, *tckn).
 		Scan(&allowance)
 
 	if tx.Error != nil || !allowance {
@@ -218,91 +219,91 @@ func (payload *requestPayload) checkOneApprovedAllowedByThirtyMinuteInterval() (
 	return true, nil
 }
 
-func getUserFraudRecordExternal(clientId *string, userId *string) (model.CreditCardFraud, error) {
+func getUserFraudRecordExternal(clientID *string, userID *string) (model.CreditCardFraud, error) {
 	creditCardFraud := model.CreditCardFraud{}
-	*userId = strings.Trim(*userId, " ")
-	*clientId = strings.Trim(*clientId, " ")
-	if *clientId == "" || *userId == "" {
-		return creditCardFraud, errors.New("clientId and/or userId is empty")
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	if *clientID == "" || *userID == "" {
+		return creditCardFraud, errors.New("clientID and/or userID is empty")
 	}
 
-	tx := config.MySqlDB.Raw(`"SELECT * FROM cc_fraud WHERE client_id = ? AND user_id = ?`, *clientId, *userId).
+	tx := config.MySQLDb.Raw(`"SELECT * FROM cc_fraud WHERE client_id = ? AND user_id = ?`, *clientID, *userID).
 		Scan(&creditCardFraud)
 
 	if tx.Error != nil {
-		return creditCardFraud, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+		return creditCardFraud, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 
 	return creditCardFraud, nil
 }
 
-func incrementFifteenCount(clientId *string, userId *string) (bool, error) {
-	*userId = strings.Trim(*userId, " ")
-	*clientId = strings.Trim(*clientId, " ")
-	if *clientId == "" || *userId == "" {
-		return false, errors.New("clientId and/or userId is empty")
+func incrementFifteenCount(clientID *string, userID *string) (bool, error) {
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	if *clientID == "" || *userID == "" {
+		return false, errors.New("clientID and/or userID is empty")
 	}
 
-	fraudRecord, err := getUserFraudRecordExternal(clientId, userId)
+	fraudRecord, err := getUserFraudRecordExternal(clientID, userID)
 	if err != nil {
-		return false, errors.New(fmt.Sprintf("\nError Details: %v", err.Error()))
+		return false, fmt.Errorf("\nError Details: %v", err.Error())
 	}
 
 	if fraudRecord.FifteenCleared == 1 {
 		return true, nil
 	}
 
-	tx := config.MySqlDB.Exec(`"UPDATE cc_fraud SET initial_fifteen_count += 1 WHERE client_id = ? AND user_id = ?`, *clientId, *userId)
+	tx := config.MySQLDb.Exec(`"UPDATE cc_fraud SET initial_fifteen_count += 1 WHERE client_id = ? AND user_id = ?`, *clientID, *userID)
 	if tx.Error != nil {
-		return false, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 
 	if fraudRecord.InitialFifteenCount == 14 {
-		changeUserPermExternal(clientId, userId, 0)
-		tx := config.MySqlDB.Exec(`"UPDATE cc_fraud SET fifteen_needs_clearance = 1 WHERE client_id = ? AND user_id = ?`, *clientId, *userId)
+		changeUserPermExternal(clientID, userID, 0)
+		tx := config.MySQLDb.Exec(`"UPDATE cc_fraud SET fifteen_needs_clearance = 1 WHERE client_id = ? AND user_id = ?`, *clientID, *userID)
 		if tx.Error != nil {
-			return false, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+			return false, fmt.Errorf("\nError Details: %v", tx.Error)
 		}
 	}
 
 	return true, nil
 }
 
-func changeUserPermExternal(clientId *string, userId *string, privillage int64) (bool, error) {
-	tx := config.MySqlDB.Exec(`"UPDATE cc_client_users SET privilege = ? WHERE client_id = ? AND user_id = ?`, privillage, *clientId, *userId)
+func changeUserPermExternal(clientID *string, userID *string, privillage int64) (bool, error) {
+	tx := config.MySQLDb.Exec(`"UPDATE cc_client_users SET privilege = ? WHERE client_id = ? AND user_id = ?`, privillage, *clientID, *userID)
 	if tx.Error != nil {
-		return false, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 	return true, nil
 }
 
 func (payload *requestPayload) changeUserPerm(privillage string) (bool, error) {
-	userId := &payload.Data.User.UserId
-	clientId := &payload.Data.ClientId
-	*userId = strings.Trim(*userId, " ")
-	*clientId = strings.Trim(*clientId, " ")
-	tx := config.MySqlDB.Exec(`"UPDATE cc_client_users SET privilege = ? WHERE client_id = ? AND user_id = ?`, privillage, *clientId, *userId)
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	tx := config.MySQLDb.Exec(`"UPDATE cc_client_users SET privilege = ? WHERE client_id = ? AND user_id = ?`, privillage, *clientID, *userID)
 	if tx.Error != nil {
-		return false, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 	return true, nil
 }
 
 func (payload *requestPayload) getUserFraudRecord() (model.CreditCardFraud, error) {
 	creditCardFraud := model.CreditCardFraud{}
-	userId := &payload.Data.User.UserId
-	clientId := &payload.Data.ClientId
-	*userId = strings.Trim(*userId, " ")
-	*clientId = strings.Trim(*clientId, " ")
-	if *clientId == "" || *userId == "" {
-		return creditCardFraud, errors.New("clientId and/or userId is empty")
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	if *clientID == "" || *userID == "" {
+		return creditCardFraud, errors.New("clientID and/or userID is empty")
 	}
 
-	tx := config.MySqlDB.Raw(`"SELECT * FROM cc_fraud WHERE client_id = ? AND user_id = ?`, *clientId, *userId).
+	tx := config.MySQLDb.Raw(`"SELECT * FROM cc_fraud WHERE client_id = ? AND user_id = ?`, *clientID, *userID).
 		Scan(&creditCardFraud)
 
 	if tx.Error != nil {
-		return creditCardFraud, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+		return creditCardFraud, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 
 	return creditCardFraud, nil
@@ -322,7 +323,7 @@ func (payload *requestPayload) checkOneCardPerBank() (bool, error) {
 	}
 
 	cryptedCC := ""
-	tx := config.MySqlDB.Raw(`SELECT ccb.bank_ica , rjr.crypted_cc AS crypted_cc
+	tx := config.MySQLDb.Raw(`SELECT ccb.bank_ica , rjr.crypted_cc AS crypted_cc
         FROM request_jetpay_registrations AS rjr 
 			INNER JOIN request AS r ON rjr.request_id = r.ID 
 			INNER JOIN cc_binlist AS ccb ON ccb.card_bin = rjr.card_bin 
@@ -332,7 +333,7 @@ func (payload *requestPayload) checkOneCardPerBank() (bool, error) {
 		AND r.Status = 1 GROUP BY ccb.bank_ica, rjr.crypted_cc LIMIT 1`,
 		"\"2022-04-05 08:00:00\"", *tckn, bankIca).Scan(&cryptedCC)
 	if tx.Error != nil {
-		return false, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 
 	cryptedCard := utils.GetMD5Hash(utils.GetMD5Hash(*cardNumber))
@@ -349,19 +350,19 @@ func (payload *requestPayload) checkOneTcknPerUser() (bool, error) {
 	if *tckn == "" {
 		return false, errors.New("card number is empty")
 	}
-	userId := &payload.Data.User.UserId
-	clientId := &payload.Data.ClientId
-	*userId = strings.Trim(*userId, " ")
-	*clientId = strings.Trim(*clientId, " ")
-	if *clientId == "" || *userId == "" {
-		return false, errors.New("clientId and/or userId is empty")
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	if *clientID == "" || *userID == "" {
+		return false, errors.New("clientID and/or userID is empty")
 	}
 
 	recTCKN := ""
-	tx := config.MySqlDB.Raw(`SELECT tckn FROM cc_fraud WHERE user_id = ? AND client_id =  LIMIT 1`,
-		*userId, clientId).Scan(&recTCKN)
+	tx := config.MySQLDb.Raw(`SELECT tckn FROM cc_fraud WHERE user_id = ? AND client_id =  LIMIT 1`,
+		*userID, clientID).Scan(&recTCKN)
 	if tx.Error != nil {
-		return false, errors.New(fmt.Sprintf("\nError Details: %v", tx.Error))
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 
 	if recTCKN == *tckn {

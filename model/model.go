@@ -37,6 +37,7 @@ type RuleSetPayload struct {
 
 // RequestPayload holds payload struct which used for fraud detection
 type RequestPayload struct {
+	//SiteId      string             `json:"site_id"`
 	ClientID    string             `json:"client_id"`
 	Transaction RequestTransaction `json:"data"`
 	User        RequestUser        `json:"user"`

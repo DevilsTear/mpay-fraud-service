@@ -16,6 +16,8 @@ type requestPayload struct {
 	sync.RWMutex
 }
 
+const MethodID = 5
+
 var instance requestPayload
 
 // GetRequestPayloadInstance constructs request payload instance
@@ -361,8 +363,8 @@ func (payload *requestPayload) checkOneTcknPerUser() (bool, error) {
 	}
 
 	recTCKN := ""
-	tx := config.MySQLDb.Raw(`SELECT tckn FROM cc_fraud WHERE user_id = ? AND client_id =  LIMIT 1`,
-		*userID, clientID).Scan(&recTCKN)
+	tx := config.MySQLDb.Raw(`SELECT tckn FROM cc_fraud WHERE user_id = ? AND client_id = ?  LIMIT 1`,
+		*userID, *clientID).Scan(&recTCKN)
 	if tx.Error != nil {
 		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
@@ -372,6 +374,74 @@ func (payload *requestPayload) checkOneTcknPerUser() (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (payload *requestPayload) checkLastTenTransactions() (bool, error) {
+	var txPaymentMethods []int64
+	//sid := &payload.Data.SiteId
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	if *clientID == "" || *userID == "" {
+		return false, errors.New("clientID and/or userID is empty")
+	}
+
+	tx := config.MySQLDb.Raw(`SELECT CAST(IFNULL(payment_method, 0) AS INT) AS payment_method FROM request WHERE UserID = ? AND SID = ? ORDER BY StartDate DESC LIMIT 10`,
+		*userID, *clientID).Scan(&txPaymentMethods)
+	if tx.Error != nil {
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
+	}
+	ccTxCount := 0
+	for _, v := range txPaymentMethods {
+		if v == MethodID {
+			ccTxCount++
+		}
+	}
+
+	if ccTxCount == 10 {
+		if err := payload.changeUserPerm("0"); err != nil {
+			return false, err
+		}
+
+		if err := clearPendingCount(*clientID, *userID); err != nil {
+			return false, err
+		}
+
+		return false, fmt.Errorf("user's deposit privilege is revoked. Please contact live support")
+	}
+
+	return true, nil
+}
+
+func clearPendingCount(clientId string, userId string) error {
+	tx := config.MySQLDb.Exec(`UPDATE cc_fraud SET pending_count = 0 WHERE user_id = ? AND client_id = ?`,
+		clientId, userId)
+	if tx.Error != nil {
+		return fmt.Errorf("\nError Details: %v", tx.Error)
+	}
+
+	return nil
+}
+
+func (payload *requestPayload) createBlacklistRecord() error {
+	tckn := &payload.Data.User.TCKN
+	*tckn = strings.Trim(*tckn, " ")
+	userName := strings.Trim(payload.Data.User.Username, " ")
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	fullName := utils.SanitizeName(payload.Data.User.FullName)
+	if *clientID == "" || *userID == "" {
+		return errors.New("clientID and/or userID is empty")
+	}
+	if tx := config.MySQLDb.Exec(`INSERT INTO blacklist (client_id, tckn, username, fullname, notes) VALUES (?, ?, ?, ?, ?)`,
+		*clientID, *tckn, userName, fullName, "Başarısız işlem denemesi!"); tx.Error != nil {
+		return fmt.Errorf("\nError Details: %v", tx.Error)
+	}
+
+	return nil
 }
 
 func (payload *requestPayload) checkPendingCountThreshold() (bool, error) {

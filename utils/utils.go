@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 )
 
 // CheckError checks if error is nil and trigger panic
@@ -59,4 +61,20 @@ func RemoveDuplicates(elements []string) (purgedEls []string) {
 func GetMD5Hash(text string) string {
 	hash := md5.Sum([]byte(text))
 	return hex.EncodeToString(hash[:])
+}
+
+// SanitizeName sets some standards on naming
+func SanitizeName(name string) string {
+	name = strings.TrimLeft(name, " ")
+	name = strings.TrimRight(name, " ")
+	if name == "" {
+		return ""
+	}
+	rule1 := regexp.MustCompile(`/^\s+|\s+$/g`)
+	rule2 := regexp.MustCompile(`/\s+/g`)
+
+	name = rule1.ReplaceAllString(name, "")
+	name = rule2.ReplaceAllString(name, " ")
+
+	return name
 }

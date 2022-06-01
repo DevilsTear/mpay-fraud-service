@@ -18,11 +18,12 @@ type requestPayload struct {
 
 const MethodID = 5
 
-var instance requestPayload
+var requestPayloadInstance requestPayload
+var activeRules = rulesets.GetInstance().GetPayloadKeyMapping()
 
 // GetRequestPayloadInstance constructs request payload instance
 func GetRequestPayloadInstance() *requestPayload {
-	return &instance
+	return &requestPayloadInstance
 }
 
 func (payload *requestPayload) SetPayload(data model.RequestPayload) {
@@ -67,7 +68,6 @@ func (payload *requestPayload) ProcessRules() (bool, error) {
 			isOK, err = payload.checkMinTransactionAmount()
 		case "MaxTransactionAmount":
 			isOK, err = payload.checkMaxTransactionAmount()
-			utils.CheckError(err)
 		}
 
 		if !isOK || err != nil {
@@ -427,6 +427,9 @@ func clearPendingCount(clientId string, userId string) error {
 func (payload *requestPayload) createBlacklistRecord() error {
 	tckn := &payload.Data.User.TCKN
 	*tckn = strings.Trim(*tckn, " ")
+	if *tckn == "" {
+		return errors.New("card number is empty")
+	}
 	userName := strings.Trim(payload.Data.User.Username, " ")
 	userID := &payload.Data.User.UserID
 	clientID := &payload.Data.ClientID
@@ -450,7 +453,36 @@ func (payload *requestPayload) checkPendingCountThreshold() (bool, error) {
 }
 
 func (payload *requestPayload) checkPendingAllowanceByTimeInterval() (bool, error) {
+	tckn := &payload.Data.User.TCKN
+	*tckn = strings.Trim(*tckn, " ")
+	if *tckn == "" {
+		return false, errors.New("card number is empty")
+	}
+	userName := strings.Trim(payload.Data.User.Username, " ")
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	fullName := utils.SanitizeName(payload.Data.User.FullName)
+	if *clientID == "" || *userID == "" {
+		return false, errors.New("clientID and/or userID is empty")
+	}
 
+	txCount := 0
+	if tx := config.MySQLDb.Raw(`SELECT 
+          COUNT(*) AS txCount
+      FROM
+          request r
+              INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
+      WHERE Status = 0 AND payment_method = 5 AND StartDate > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+           AND ((SID = ? AND UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))
+      ORDER BY StartDate DESC;`,
+		config.PendingAllowanceByTimeInterval, *clientID, userName, fullName, *tckn).Scan(txCount); tx.Error != nil {
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
+	}
+	if txCount > 0 {
+		return false, fmt.Errorf("user already has a pending transaction")
+	}
 	return true, nil
 }
 

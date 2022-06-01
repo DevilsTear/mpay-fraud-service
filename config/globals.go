@@ -25,16 +25,16 @@ var (
 
 var (
 	// PendingCountThreshold is a fraud control param expresses to check pending request counts
-	PendingCountThreshold int = 10
+	PendingCountThreshold int64 = 10
 
 	// PendingAllowanceByTimeInterval is a fraud control param expresses to check pending request allowance in a predefined time slot
-	PendingAllowanceByTimeInterval int = 10
+	PendingAllowanceByTimeInterval int64 = 10
 
 	// ApprovedAllowanceByTimeInterval is a fraud control param expresses to check pending request approval in a predefined time slot
-	ApprovedAllowanceByTimeInterval int = 30
+	ApprovedAllowanceByTimeInterval int64 = 30
 
 	// MaxDailyAllowancePerUser is a fraud control param expresses to check max daily request allowance limit per user
-	MaxDailyAllowancePerUser int = 5
+	MaxDailyAllowancePerUser int64 = 5
 
 	// MinTransactionAmount is a fraud control param expresses to check min daily total transaction allowance limit per user
 	MinTransactionAmount float64 = 50.0

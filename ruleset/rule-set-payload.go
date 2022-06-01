@@ -3,6 +3,7 @@ package ruleset
 import (
 	"errors"
 	"fmt"
+	"fraud-service/config"
 	model "fraud-service/model"
 	"sort"
 	"sync"
@@ -27,8 +28,28 @@ func (payload *ruleSetPayload) SetPayload(data []model.RuleSet) (err error) {
 	payload.Lock()
 	defer payload.Unlock()
 	payload.Data, err = filterActiveOnes(data)
+	payload.SetGlobalParams()
 
 	return
+}
+
+func (payload *ruleSetPayload) SetGlobalParams() {
+	for _, ruleSet := range payload.Data {
+		switch ruleSet.Key {
+		case "PendingCountThreshold":
+			config.PendingCountThreshold = ruleSet.Value.(int64)
+		case "PendingAllowanceByTimeInterval":
+			config.PendingAllowanceByTimeInterval = ruleSet.Value.(int64)
+		case "ApprovedAllowanceByTimeInterval":
+			config.ApprovedAllowanceByTimeInterval = ruleSet.Value.(int64)
+		case "MaxDailyAllowancePerUser":
+			config.MaxDailyAllowancePerUser = ruleSet.Value.(int64)
+		case "MinTransactionAmount":
+			config.MinTransactionAmount = ruleSet.Value.(float64)
+		case "MaxTransactionAmount":
+			config.MaxTransactionAmount = ruleSet.Value.(float64)
+		}
+	}
 }
 
 // GetPayload gets ruleset slice from the instance
@@ -36,6 +57,14 @@ func (payload *ruleSetPayload) GetPayload() (out []model.RuleSet) {
 	payload.RLock()
 	defer payload.RUnlock()
 	return payload.Data
+}
+
+// GetPayloadKeyMapping gets ruleset mappings by Key
+func (payload *ruleSetPayload) GetPayloadKeyMapping() (out map[string]model.RuleSet) {
+	for _, v := range payload.GetPayload() {
+		out[v.Key] = v
+	}
+	return
 }
 
 func filterActiveOnes(rules []model.RuleSet) (out []model.RuleSet, err error) {

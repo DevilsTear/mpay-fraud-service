@@ -78,3 +78,27 @@ func SanitizeName(name string) string {
 
 	return name
 }
+
+func LocalizeToEnglish(s string) string {
+	s = strings.TrimLeft(s, " ")
+	s = strings.TrimRight(s, " ")
+	if s == "" {
+		return ""
+	}
+
+	s = regexp.MustCompile(`/Ğ/gim`).ReplaceAllString(s, "g")
+	s = regexp.MustCompile(`/Ü/gim`).ReplaceAllString(s, "u")
+	s = regexp.MustCompile(`/Ş/gim`).ReplaceAllString(s, "s")
+	s = regexp.MustCompile(`/I/gim`).ReplaceAllString(s, "i")
+	s = regexp.MustCompile(`/İ/gim`).ReplaceAllString(s, "i")
+	s = regexp.MustCompile(`/Ö/gim`).ReplaceAllString(s, "o")
+	s = regexp.MustCompile(`/Ç/gim`).ReplaceAllString(s, "c")
+	s = regexp.MustCompile(`/ğ/gim`).ReplaceAllString(s, "g")
+	s = regexp.MustCompile(`/ü/gim`).ReplaceAllString(s, "u")
+	s = regexp.MustCompile(`/ş/gim`).ReplaceAllString(s, "s")
+	s = regexp.MustCompile(`/ı/gim`).ReplaceAllString(s, "i")
+	s = regexp.MustCompile(`/ö/gim`).ReplaceAllString(s, "o")
+	s = regexp.MustCompile(`/ç/gim`).ReplaceAllString(s, "c")
+
+	return s
+}

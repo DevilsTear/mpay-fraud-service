@@ -7,6 +7,7 @@ import (
 	"fraud-service/model"
 	rulesets "fraud-service/ruleset"
 	"fraud-service/utils"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -449,6 +450,29 @@ func (payload *requestPayload) createBlacklistRecord() error {
 
 func (payload *requestPayload) checkPendingCountThreshold() (bool, error) {
 
+	tckn := &payload.Data.User.TCKN
+	*tckn = strings.Trim(*tckn, " ")
+	if *tckn == "" {
+		return false, errors.New("card number is empty")
+	}
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	if *clientID == "" || *userID == "" {
+		return false, errors.New("clientID and/or userID is empty")
+	}
+
+	txCount := int64(0)
+	if tx := config.MySQLDb.Raw(`SELECT COUNT(*) AS txCount
+		FROM cc_fraud WHERE user_id = ? AND client_id = ? AND tckn = ?`, *userID, *clientID, *tckn).Scan(txCount); tx.Error != nil {
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
+	}
+	if txCount > config.PendingCountThreshold {
+		clearPendingCount(*clientID, *userID)
+		payload.createBlacklistRecord()
+		return false, fmt.Errorf("user blacklisted")
+	}
 	return true, nil
 }
 
@@ -458,7 +482,6 @@ func (payload *requestPayload) checkPendingAllowanceByTimeInterval() (bool, erro
 	if *tckn == "" {
 		return false, errors.New("card number is empty")
 	}
-	userName := strings.Trim(payload.Data.User.Username, " ")
 	userID := &payload.Data.User.UserID
 	clientID := &payload.Data.ClientID
 	*userID = strings.Trim(*userID, " ")
@@ -468,19 +491,16 @@ func (payload *requestPayload) checkPendingAllowanceByTimeInterval() (bool, erro
 		return false, errors.New("clientID and/or userID is empty")
 	}
 
-	txCount := 0
-	if tx := config.MySQLDb.Raw(`SELECT 
-          COUNT(*) AS txCount
-      FROM
-          request r
-              INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
-      WHERE Status = 0 AND payment_method = 5 AND StartDate > DATE_SUB(NOW(), INTERVAL ? MINUTE)
-           AND ((SID = ? AND UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))
-      ORDER BY StartDate DESC;`,
-		config.PendingAllowanceByTimeInterval, *clientID, userName, fullName, *tckn).Scan(txCount); tx.Error != nil {
+	txCount := int64(0)
+	if tx := config.MySQLDb.Raw(`SELECT COUNT(*) AS txCount
+		FROM request r
+			INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
+      	WHERE Status = 0 AND payment_method = 5 AND StartDate > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+           	AND ((SID = ? AND UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))
+      	ORDER BY StartDate DESC;`, config.PendingAllowanceByTimeInterval, *clientID, *userID, fullName, *tckn).Scan(txCount); tx.Error != nil {
 		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
-	if txCount > 0 {
+	if txCount > config.PendingAllowanceByTimeInterval {
 		return false, fmt.Errorf("user already has a pending transaction")
 	}
 	return true, nil
@@ -492,17 +512,64 @@ func (payload *requestPayload) checkApprovedAllowanceByTimeInterval() (bool, err
 }
 
 func (payload *requestPayload) checkMaxDailyAllowancePerUser() (bool, error) {
+	tckn := &payload.Data.User.TCKN
+	*tckn = strings.Trim(*tckn, " ")
+	if *tckn == "" {
+		return false, errors.New("card number is empty")
+	}
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.ClientID
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	fullName := utils.SanitizeName(payload.Data.User.FullName)
+	if *clientID == "" || *userID == "" {
+		return false, errors.New("clientID and/or userID is empty")
+	}
 
+	txCount := int64(0)
+	if tx := config.MySQLDb.Raw(`SELECT COUNT(*) AS txCount
+		FROM request r
+              	INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
+      	WHERE Status = 1 AND payment_method = 5 AND StartDate >= CAST(CURDATE() AS DATETIME) 
+			AND StartDate <= DATE_SUB(CAST(DATE_ADD(CURDATE(), INTERVAL 1 DAY) AS DATETIME), INTERVAL 1 SECOND)
+           	AND ((SID = ? AND UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))
+      	ORDER BY StartDate DESC;`, *clientID, *userID, fullName, *tckn).Scan(txCount); tx.Error != nil {
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
+	}
+	if txCount >= config.MaxDailyAllowancePerUser {
+		return false, fmt.Errorf("user exceeds daily approved transaction count limits")
+	}
 	return true, nil
 }
 
 func (payload *requestPayload) checkMinTransactionAmount() (bool, error) {
-
+	txAmount, err := strconv.ParseFloat(payload.Data.Transaction.Amount, 64)
+	if err != nil {
+		return false, fmt.Errorf("unexpacted amount value")
+	}
+	if txAmount < config.MinTransactionAmount {
+		return false, fmt.Errorf("amount below minimum limits")
+	}
 	return true, nil
 }
 
 func (payload *requestPayload) checkMaxTransactionAmount() (bool, error) {
+	fullName := utils.LocalizeToEnglish(utils.SanitizeName(payload.Data.User.FullName))
+	cardHoldersName := utils.LocalizeToEnglish(payload.Data.Transaction.CardHoldersName)
+	if fullName != cardHoldersName {
+		return false, fmt.Errorf("card holder's name must match with fullname")
+	}
+	return true, nil
+}
 
+func (payload *requestPayload) checkCardholdersNameMatch() (bool, error) {
+	txAmount, err := strconv.ParseFloat(payload.Data.Transaction.Amount, 64)
+	if err != nil {
+		return false, fmt.Errorf("unexpacted amount value")
+	}
+	if txAmount > config.MaxTransactionAmount {
+		return false, fmt.Errorf("amount above maximum limits")
+	}
 	return true, nil
 }
 

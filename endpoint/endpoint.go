@@ -62,13 +62,10 @@ func ServeEndpoint(w http.ResponseWriter, r *http.Request, endpoint string) {
 		var payload model.RuleSetPayload
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		if err != nil {
+			log.Println(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if err != nil {
-			log.Println(err)
-		}
-		log.Println(payload)
 		// log.Println(payload)
 		activeRules := rulesets.GetInstance()
 		err = activeRules.SetPayload(payload.Data)

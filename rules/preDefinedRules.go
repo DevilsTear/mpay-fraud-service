@@ -168,7 +168,7 @@ func (payload *requestPayload) checkThreeUniqueCardsAllowed() (bool, error) {
 func (payload *requestPayload) checkFifteenCountClearance() (bool, error) {
 	fifteenNeedsClearance := false
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	if *userID == "" || *clientID == "" {
@@ -194,7 +194,7 @@ func (payload *requestPayload) checkOneApprovedAllowedByThirtyMinuteInterval() (
 	allowance := false
 	tckn := &payload.Data.User.TCKN
 	userID := &payload.Data.User.UserID
-	sid := 0
+	clientID := &payload.Data.Client.Id
 	fullName := &payload.Data.User.FullName
 	*tckn = strings.Trim(*tckn, " ")
 	if *tckn == "" {
@@ -207,7 +207,7 @@ func (payload *requestPayload) checkOneApprovedAllowedByThirtyMinuteInterval() (
 		  request r
 		  INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
 	  WHERE Status = 1 AND payment_method = 5 AND (StartDate > DATE_SUB(NOW(), INTERVAL 30 MINUTE)) AND 
-		((r.SID = ? AND r.UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))`, sid, *userID, fullName, *tckn).
+		((r.SID = ? AND r.UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))`, clientID, *userID, fullName, *tckn).
 		Scan(&allowance)
 
 	if tx.Error != nil || !allowance {
@@ -284,7 +284,7 @@ func changeUserPermExternal(clientID *string, userID *string, privillage int64) 
 
 func (payload *requestPayload) changeUserPerm(privillage string) error {
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	tx := config.MySQLDb.Exec(`"UPDATE cc_client_users SET privilege = ? WHERE client_id = ? AND user_id = ?`, privillage, *clientID, *userID)
@@ -297,7 +297,7 @@ func (payload *requestPayload) changeUserPerm(privillage string) error {
 func (payload *requestPayload) getUserFraudRecord() (model.CreditCardFraud, error) {
 	creditCardFraud := model.CreditCardFraud{}
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	if *clientID == "" || *userID == "" {
@@ -356,7 +356,7 @@ func (payload *requestPayload) checkOneTcknPerUser() (bool, error) {
 		return false, errors.New("card number is empty")
 	}
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	if *clientID == "" || *userID == "" {
@@ -379,9 +379,8 @@ func (payload *requestPayload) checkOneTcknPerUser() (bool, error) {
 
 func (payload *requestPayload) checkLastTenTransactions() (bool, error) {
 	var txPaymentMethods []int64
-	//sid := &payload.Data.SiteId
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	if *clientID == "" || *userID == "" {
@@ -433,7 +432,7 @@ func (payload *requestPayload) createBlacklistRecord() error {
 	}
 	userName := strings.Trim(payload.Data.User.Username, " ")
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	fullName := utils.SanitizeName(payload.Data.User.FullName)
@@ -456,7 +455,7 @@ func (payload *requestPayload) checkPendingCountThreshold() (bool, error) {
 		return false, errors.New("card number is empty")
 	}
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	if *clientID == "" || *userID == "" {
@@ -483,7 +482,7 @@ func (payload *requestPayload) checkPendingAllowanceByTimeInterval() (bool, erro
 		return false, errors.New("card number is empty")
 	}
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	fullName := utils.SanitizeName(payload.Data.User.FullName)
@@ -518,7 +517,7 @@ func (payload *requestPayload) checkMaxDailyAllowancePerUser() (bool, error) {
 		return false, errors.New("card number is empty")
 	}
 	userID := &payload.Data.User.UserID
-	clientID := &payload.Data.ClientID
+	clientID := &payload.Data.Client.Id
 	*userID = strings.Trim(*userID, " ")
 	*clientID = strings.Trim(*clientID, " ")
 	fullName := utils.SanitizeName(payload.Data.User.FullName)

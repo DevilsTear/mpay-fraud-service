@@ -37,8 +37,7 @@ type RuleSetPayload struct {
 
 // RequestPayload holds payload struct which used for fraud detection
 type RequestPayload struct {
-	//SiteId      string             `json:"site_id"`
-	ClientID    string             `json:"client_id"`
+	Client      RequestClient      `json:"client"`
 	Transaction RequestTransaction `json:"data"`
 	User        RequestUser        `json:"user"`
 }
@@ -64,6 +63,13 @@ type RequestUser struct {
 	Email       string `json:"email"`
 	TCKN        string `json:"tckn"`
 	IPAddress   string `json:"ip_address"`
+}
+
+// RequestClient holds client struct which used for fraud detection
+type RequestClient struct {
+	Id                       string `json:"id"`
+	CCUserPermissionCheck    bool   `json:"cc_user_perm_check"`
+	CCHolderAndFullNameMatch bool   `json:"fullname_cc_match"`
 }
 
 // RedisConfig holds redis config struct

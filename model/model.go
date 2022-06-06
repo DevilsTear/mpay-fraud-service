@@ -105,7 +105,7 @@ type MySQLConfig struct {
 	// default: true
 	DontSupportRenameColumn bool `json:"dont_support_rename_column"`
 
-	// auto configure based on currently MySQL version
+	// autoconfigure based on currently MySQL version
 	// default: false
 	SkipInitializeWithVersion bool `json:"skip_initialize_with_version"`
 }

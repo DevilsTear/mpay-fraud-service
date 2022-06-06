@@ -14,16 +14,18 @@ import (
 )
 
 // LoadInitials sets application specific global settings
-func LoadInitials(ctx context.Context) {
+func LoadInitials(ctx context.Context) error {
 	err := LoadRedisSettings(ctx)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	err = LoadMySQLSettings(ctx)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // LoadRedisSettings sets Redis settings on a global scope

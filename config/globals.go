@@ -2,7 +2,6 @@ package config
 
 import (
 	"fraud-service/model"
-
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )

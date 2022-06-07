@@ -6,6 +6,7 @@ import (
 	"fraud-service/config"
 	model "fraud-service/model"
 	"sort"
+	"strconv"
 	"sync"
 )
 
@@ -37,17 +38,29 @@ func (payload *ruleSetPayload) SetGlobalParams() {
 	for _, ruleSet := range payload.Data {
 		switch ruleSet.Key {
 		case "PendingCountThreshold":
-			config.PendingCountThreshold = ruleSet.Value.(int64)
+			if val, err := strconv.ParseInt(ruleSet.Value.(string), 10, 64); err == nil {
+				config.PendingCountThreshold = val
+			}
 		case "PendingAllowanceByTimeInterval":
-			config.PendingAllowanceByTimeInterval = ruleSet.Value.(int64)
+			if val, err := strconv.ParseInt(ruleSet.Value.(string), 10, 64); err == nil {
+				config.PendingAllowanceByTimeInterval = val
+			}
 		case "ApprovedAllowanceByTimeInterval":
-			config.ApprovedAllowanceByTimeInterval = ruleSet.Value.(int64)
+			if val, err := strconv.ParseInt(ruleSet.Value.(string), 10, 64); err == nil {
+				config.ApprovedAllowanceByTimeInterval = val
+			}
 		case "MaxDailyAllowancePerUser":
-			config.MaxDailyAllowancePerUser = ruleSet.Value.(int64)
+			if val, err := strconv.ParseInt(ruleSet.Value.(string), 10, 64); err == nil {
+				config.MaxDailyAllowancePerUser = val
+			}
 		case "MinTransactionAmount":
-			config.MinTransactionAmount = ruleSet.Value.(float64)
+			if val, err := strconv.ParseFloat(ruleSet.Value.(string), 64); err == nil {
+				config.MinTransactionAmount = val
+			}
 		case "MaxTransactionAmount":
-			config.MaxTransactionAmount = ruleSet.Value.(float64)
+			if val, err := strconv.ParseFloat(ruleSet.Value.(string), 64); err == nil {
+				config.MaxTransactionAmount = val
+			}
 		}
 	}
 }

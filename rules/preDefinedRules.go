@@ -111,7 +111,7 @@ func (payload *requestPayload) getCardBINIca() (string, error) {
 	}
 
 	cardBin := (*cardNumber)[:6]
-	tx := config.MySQLDb.Raw("SELECT bankIca as binExists FROM cc_binlist WHERE card_bin = ? LIMIT 1", cardBin).
+	tx := config.MySQLDb.Raw("SELECT bank_ica as bankIca FROM cc_binlist WHERE card_bin = ? LIMIT 1", cardBin).
 		Scan(&bankIca)
 
 	if tx.Error != nil || bankIca == "" {
@@ -137,15 +137,15 @@ func (payload *requestPayload) checkThreeUniqueCardsAllowed() (bool, error) {
 	if *tckn == "" {
 		return false, errors.New("tckn is empty")
 	}
-	var rowCount int64
 	var cryptedCCs []string
-	tx := config.MySQLDb.Raw(`SELECT rjr.crypted_cc FROM request_jetpay_registrations AS rjr 
+	tx := config.MySQLDb.Raw(`SELECT rjr.crypted_cc 
+		FROM request_jetpay_registrations AS rjr 
 			INNER JOIN request AS r ON rjr.request_id = r.ID 
-			WHERE created_at >= CAST(CURDATE() AS DATETIME) 
+		WHERE created_at >= CAST(CURDATE() AS DATETIME) 
 			AND created_at <= DATE_SUB(CAST(DATE_ADD(CURDATE(), INTERVAL 1 DAY) AS DATETIME), INTERVAL 1 SECOND) 
-			AND user_tckn = ? AND r.Status = 1 GROUP BY rjr.crypted_cc`, 3, *tckn).Scan(&cryptedCCs).Count(&rowCount)
+			AND user_tckn = ? AND r.Status = 1 GROUP BY rjr.crypted_cc`, *tckn).Scan(&cryptedCCs)
 
-	cardAllowance := rowCount <= 3
+	cardAllowance := len(cryptedCCs) <= 3
 	if tx.Error != nil || !cardAllowance {
 		errString := "daily card allowance limit reached!"
 		if tx.Error != nil {
@@ -175,7 +175,7 @@ func (payload *requestPayload) checkFifteenCountClearance() (bool, error) {
 		return false, errors.New("userID and/or clientID is empty")
 	}
 
-	tx := config.MySQLDb.Raw(`SELECT fifteenNeedsClearance FROM cc_fraud WHERE user_id = ? AND client_id = ?`, *userID, *clientID).
+	tx := config.MySQLDb.Raw(`SELECT fifteen_needs_clearance AS fifteenNeedsClearance FROM cc_fraud WHERE user_id = ? AND client_id = ?`, *userID, *clientID).
 		Scan(&fifteenNeedsClearance)
 
 	if tx.Error != nil || fifteenNeedsClearance {
@@ -202,12 +202,11 @@ func (payload *requestPayload) checkOneApprovedAllowedByThirtyMinuteInterval() (
 	}
 
 	tx := config.MySQLDb.Raw(`SELECT
-      COUNT(1) == 0 AS allowance
-	  FROM
-		  request r
+      COUNT(1) = 0 AS allowance
+	  FROM request r
 		  INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
-	  WHERE Status = 1 AND payment_method = 5 AND (StartDate > DATE_SUB(NOW(), INTERVAL 30 MINUTE)) AND 
-		((r.SID = ? AND r.UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))`, clientID, *userID, fullName, *tckn).
+	  WHERE Status = 1 AND payment_method = 5 AND (StartDate > DATE_SUB(NOW(), INTERVAL 30 MINUTE)) 
+		AND ((r.SID = ? AND r.UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))`, clientID, *userID, fullName, *tckn).
 		Scan(&allowance)
 
 	if tx.Error != nil || !allowance {
@@ -332,10 +331,11 @@ func (payload *requestPayload) checkOneCardPerBank() (bool, error) {
         FROM request_jetpay_registrations AS rjr 
 			INNER JOIN request AS r ON rjr.request_id = r.ID 
 			INNER JOIN cc_binlist AS ccb ON ccb.card_bin = rjr.card_bin 
-        AND rjr.created_at >= ? 
-		AND user_tckn = ? 
-		AND ccb.bank_ica = ? 
-		AND r.Status = 1 GROUP BY ccb.bank_ica, rjr.crypted_cc LIMIT 1`,
+				AND rjr.created_at >= ? 
+				AND user_tckn = ? 
+				AND ccb.bank_ica = ? 
+				AND r.Status = 1 
+		GROUP BY ccb.bank_ica, rjr.crypted_cc LIMIT 1`,
 		"\"2022-04-05 08:00:00\"", *tckn, bankIca).Scan(&cryptedCC)
 	if tx.Error != nil {
 		return false, fmt.Errorf("\nError Details: %v", tx.Error)
@@ -387,7 +387,8 @@ func (payload *requestPayload) checkLastTenTransactions() (bool, error) {
 		return false, errors.New("clientID and/or userID is empty")
 	}
 
-	tx := config.MySQLDb.Raw(`SELECT CAST(IFNULL(payment_method, 0) AS INT) AS payment_method FROM request WHERE UserID = ? AND SID = ? ORDER BY StartDate DESC LIMIT 10`,
+	tx := config.MySQLDb.Raw(`SELECT CAST(IFNULL(payment_method, 0) AS UNSIGNED) AS payment_method 
+		FROM request WHERE UserID = ? AND SID = ? ORDER BY StartDate DESC LIMIT 10`,
 		*userID, *clientID).Scan(&txPaymentMethods)
 	if tx.Error != nil {
 		return false, fmt.Errorf("\nError Details: %v", tx.Error)
@@ -463,8 +464,8 @@ func (payload *requestPayload) checkPendingCountThreshold() (bool, error) {
 	}
 
 	txCount := int64(0)
-	if tx := config.MySQLDb.Raw(`SELECT COUNT(*) AS txCount
-		FROM cc_fraud WHERE user_id = ? AND client_id = ? AND tckn = ?`, *userID, *clientID, *tckn).Scan(txCount); tx.Error != nil {
+	if tx := config.MySQLDb.Raw(`SELECT COUNT(1) AS txCount
+		FROM cc_fraud WHERE user_id = ? AND client_id = ? AND tckn = ?`, *userID, *clientID, *tckn).Scan(&txCount); tx.Error != nil {
 		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 	if txCount > config.PendingCountThreshold {
@@ -496,7 +497,7 @@ func (payload *requestPayload) checkPendingAllowanceByTimeInterval() (bool, erro
 			INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
       	WHERE Status = 0 AND payment_method = 5 AND StartDate > DATE_SUB(NOW(), INTERVAL ? MINUTE)
            	AND ((SID = ? AND UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))
-      	ORDER BY StartDate DESC;`, config.PendingAllowanceByTimeInterval, *clientID, *userID, fullName, *tckn).Scan(txCount); tx.Error != nil {
+      	ORDER BY StartDate DESC;`, config.PendingAllowanceByTimeInterval, *clientID, *userID, fullName, *tckn).Scan(&txCount); tx.Error != nil {
 		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 	if txCount > config.PendingAllowanceByTimeInterval {
@@ -505,6 +506,7 @@ func (payload *requestPayload) checkPendingAllowanceByTimeInterval() (bool, erro
 	return true, nil
 }
 
+// TODO
 func (payload *requestPayload) checkApprovedAllowanceByTimeInterval() (bool, error) {
 
 	return true, nil
@@ -532,7 +534,7 @@ func (payload *requestPayload) checkMaxDailyAllowancePerUser() (bool, error) {
       	WHERE Status = 1 AND payment_method = 5 AND StartDate >= CAST(CURDATE() AS DATETIME) 
 			AND StartDate <= DATE_SUB(CAST(DATE_ADD(CURDATE(), INTERVAL 1 DAY) AS DATETIME), INTERVAL 1 SECOND)
            	AND ((SID = ? AND UserID = ?) OR (r.FullName = ? AND rjr.user_tckn = ?))
-      	ORDER BY StartDate DESC;`, *clientID, *userID, fullName, *tckn).Scan(txCount); tx.Error != nil {
+      	ORDER BY StartDate DESC;`, *clientID, *userID, fullName, *tckn).Scan(&txCount); tx.Error != nil {
 		return false, fmt.Errorf("\nError Details: %v", tx.Error)
 	}
 	if txCount >= config.MaxDailyAllowancePerUser {

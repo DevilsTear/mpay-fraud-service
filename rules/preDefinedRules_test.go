@@ -1,10 +1,15 @@
 package rules
 
 import (
+	"context"
 	"encoding/json"
+	"fraud-service/config"
 	"fraud-service/model"
 	rulesets "fraud-service/ruleset"
 	"log"
+	"os"
+	"path"
+	"runtime"
 	"testing"
 )
 
@@ -43,6 +48,11 @@ var jsonRuleSetPayload = `{
 }`
 
 var jsonRequestPayload = `{
+    "client": {
+        "id": "1",
+        "cc_user_perm_check": true,
+        "fullname_cc_match": true
+    },
     "data": {
         "amount": "250.00",
         "trx": "oaisufklafasfl1111112d1233",
@@ -67,6 +77,22 @@ var jsonRequestPayload = `{
 var activeRulesInstance = rulesets.GetInstance()
 
 func init() {
+	_, filename, _, _ := runtime.Caller(0)
+	// The ".." may change depending on you folder structure
+	dir := path.Join(path.Dir(filename), "..")
+	err := os.Chdir(dir)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func init() {
+	if err := config.LoadInitials(context.TODO()); err != nil {
+		panic(err)
+	}
+}
+
+func init() {
 	var payload model.RuleSetPayload
 	if err := json.Unmarshal([]byte(jsonRuleSetPayload), &payload); err != nil {
 		log.Println(err)
@@ -82,7 +108,7 @@ func init() {
 		return
 	}
 
-	activeRules = activeRulesInstance.GetPayloadKeyMapping()
+	//activeRules = activeRulesInstance.GetPayloadKeyMapping()
 }
 
 func init() {
@@ -98,5 +124,83 @@ func init() {
 func TestCheckCardBIN(t *testing.T) {
 	if isOK, err := requestPayloadInstance.checkCardBIN(); !isOK || err != nil {
 		t.Errorf("%v check is failed!\nError Details: %v", "checkCardBIN", err)
+	}
+}
+
+func TestCheckThreeUniqueCardsAllowed(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkThreeUniqueCardsAllowed(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkThreeUniqueCardsAllowed", err)
+	}
+}
+
+func TestCheckFifteenCountClearance(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkFifteenCountClearance(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkFifteenCountClearance", err)
+	}
+}
+
+func TestCheckOneApprovedAllowedByThirtyMinuteInterval(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkOneApprovedAllowedByThirtyMinuteInterval(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkOneApprovedAllowedByThirtyMinuteInterval", err)
+	}
+}
+
+func TestCheckOneCardPerBank(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkOneCardPerBank(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkOneCardPerBank", err)
+	}
+}
+
+func TestCheckOneTcknPerUser(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkOneTcknPerUser(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkOneTcknPerUser", err)
+	}
+}
+
+func TestCheckLastTenTransactions(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkLastTenTransactions(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkLastTenTransactions", err)
+	}
+}
+
+func TestCheckPendingCountThreshold(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkPendingCountThreshold(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkPendingCountThreshold", err)
+	}
+}
+
+func TestCheckPendingAllowanceByTimeInterval(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkPendingAllowanceByTimeInterval(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkPendingAllowanceByTimeInterval", err)
+	}
+}
+
+func TestCheckApprovedAllowanceByTimeInterval(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkApprovedAllowanceByTimeInterval(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkApprovedAllowanceByTimeInterval", err)
+	}
+}
+
+func TestCheckMaxDailyAllowancePerUser(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkMaxDailyAllowancePerUser(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkMaxDailyAllowancePerUser", err)
+	}
+}
+
+func TestCheckMinTransactionAmount(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkMinTransactionAmount(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkMinTransactionAmount", err)
+	}
+}
+
+func TestCheckMaxTransactionAmount(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkMaxTransactionAmount(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkMaxTransactionAmount", err)
+	}
+}
+
+func TestCheckCardholdersNameMatch(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkCardholdersNameMatch(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkCardholdersNameMatch", err)
 	}
 }

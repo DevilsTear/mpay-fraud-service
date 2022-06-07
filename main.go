@@ -10,6 +10,7 @@ import (
 	"fraud-service/pubsub"
 	rulesets "fraud-service/ruleset"
 	"fraud-service/utils"
+	"github.com/joho/godotenv"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -26,6 +27,11 @@ func init() {
 	}
 	if err := loadPredefinedRules(ctx); err != nil {
 		log.Println(err)
+	}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
 	}
 }
 

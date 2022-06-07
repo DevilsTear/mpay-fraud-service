@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 // OperatorType is comparison operator enum used to handle rule check
 type OperatorType string
 
@@ -140,4 +142,32 @@ type CreditCardFraud struct {
 	InitialFifteenCount   int64  `json:"initial_fifteen_count"`
 	FifteenCleared        int64  `json:"fifteen_cleared"`
 	FifteenNeedsClearance int64  `json:"fifteen_needs_clearance"`
+}
+
+type TcknCheckRequestParams struct {
+	ClientId    string `json:"client_id"`
+	UserId      string `json:"user_id"`
+	Username    string `json:"username"`
+	TCKN        string `json:"tckn"`
+	FirstName   string `json:"firstname"`
+	LastName    string `json:"lastname"`
+	YearOfBirth string `json:"yearofbirth"`
+}
+
+type APIError struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+	Err     error  `json:"error"`
+}
+
+func (err APIError) Error() string {
+	return fmt.Sprintf("Code: %v, Message: %v", err.Code, err.Message)
+}
+
+func NewAPIErrorWrapper(code int64, err error, message string) APIError {
+	return APIError{
+		Message: message,
+		Code:    code,
+		Err:     err,
+	}
 }

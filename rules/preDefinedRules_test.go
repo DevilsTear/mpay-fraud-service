@@ -3,13 +3,16 @@ package rules
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"fraud-service/config"
 	"fraud-service/model"
 	rulesets "fraud-service/ruleset"
+	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -87,6 +90,11 @@ func init() {
 }
 
 func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	if err := config.LoadInitials(context.TODO()); err != nil {
 		panic(err)
 	}
@@ -202,5 +210,29 @@ func TestCheckMaxTransactionAmount(t *testing.T) {
 func TestCheckCardholdersNameMatch(t *testing.T) {
 	if isOK, err := requestPayloadInstance.checkCardholdersNameMatch(); !isOK || err != nil {
 		t.Errorf("%v check is failed!\nError Details: %v", "checkCardholdersNameMatch", err)
+	}
+}
+
+func TestCheckUserPerm(t *testing.T) {
+	if isOK, err := requestPayloadInstance.checkUserPerm(); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkUserPerm", err)
+	}
+}
+
+func TestCheckTcknViaApi(t *testing.T) {
+	parsedName := strings.Split(requestPayloadInstance.Data.User.FullName, " ")
+	firstName, lastName := strings.Join(parsedName[:len(parsedName)-1], " "), strings.Join(parsedName[len(parsedName)-1:], " ")
+	fmt.Printf("firstName: %v\tlastName:%v\n", firstName, lastName)
+	requestParams := model.TcknCheckRequestParams{
+		ClientId:    requestPayloadInstance.Data.Client.Id,
+		UserId:      requestPayloadInstance.Data.User.UserID,
+		Username:    requestPayloadInstance.Data.User.Username,
+		TCKN:        requestPayloadInstance.Data.User.TCKN,
+		FirstName:   firstName,
+		LastName:    lastName,
+		YearOfBirth: requestPayloadInstance.Data.User.YearOdBirth,
+	}
+	if isOK, err := checkTcknViaApi(requestParams, false); !isOK || err != nil {
+		t.Errorf("%v check is failed!\nError Details: %v", "checkTcknViaApi", err)
 	}
 }

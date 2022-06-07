@@ -1,12 +1,17 @@
 package rules
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"fraud-service/config"
 	"fraud-service/model"
 	rulesets "fraud-service/ruleset"
 	"fraud-service/utils"
+	"io/ioutil"
+	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -492,7 +497,7 @@ func (payload *requestPayload) checkPendingAllowanceByTimeInterval() (bool, erro
 	}
 
 	txCount := int64(0)
-	if tx := config.MySQLDb.Raw(`SELECT COUNT(*) AS txCount
+	if tx := config.MySQLDb.Raw(`SELECT COUNT(1) AS txCount
 		FROM request r
 			INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
       	WHERE Status = 0 AND payment_method = 5 AND StartDate > DATE_SUB(NOW(), INTERVAL ? MINUTE)
@@ -528,7 +533,7 @@ func (payload *requestPayload) checkMaxDailyAllowancePerUser() (bool, error) {
 	}
 
 	txCount := int64(0)
-	if tx := config.MySQLDb.Raw(`SELECT COUNT(*) AS txCount
+	if tx := config.MySQLDb.Raw(`SELECT COUNT(1) AS txCount
 		FROM request r
               	INNER JOIN request_jetpay_registrations rjr ON rjr.request_id = r.ID
       	WHERE Status = 1 AND payment_method = 5 AND StartDate >= CAST(CURDATE() AS DATETIME) 
@@ -572,6 +577,83 @@ func (payload *requestPayload) checkCardholdersNameMatch() (bool, error) {
 		return false, fmt.Errorf("amount above maximum limits")
 	}
 	return true, nil
+}
+
+func (payload *requestPayload) checkUserPerm() (response bool, err error) {
+	userID := &payload.Data.User.UserID
+	clientID := &payload.Data.Client.Id
+	*userID = strings.Trim(*userID, " ")
+	*clientID = strings.Trim(*clientID, " ")
+	userName := strings.Trim(payload.Data.User.Username, " ")
+	fullName := utils.SanitizeName(payload.Data.User.FullName)
+	if *clientID == "" || *userID == "" {
+		return false, errors.New("clientID and/or userID is empty")
+	}
+
+	tx := config.MySQLDb.Raw(`SELECT privilege
+		FROM cc_client_users WHERE client_id = ? AND user_id = ? LIMIT 1;`, *clientID, *userID).Scan(&response)
+
+	//fmt.Printf("SELECT privilege AS txCount FROM cc_client_users WHERE client_id = %v AND user_id = %v LIMIT 1;\n", *clientID, *userID)
+	if tx.Error != nil {
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
+	}
+	if tx.RowsAffected > 0 {
+		if response {
+			return response, nil
+		}
+		return response, fmt.Errorf("user is not allowed to use the method. Please contact live support")
+	}
+
+	tx = config.MySQLDb.Exec(`INSERT INTO cc_client_users(client_id,username,user_id,fullname,privilege) VALUES (?,?,?,?,?);`,
+		*clientID, userName, *userID, fullName, 0)
+	if tx.Error != nil {
+		return false, fmt.Errorf("\nError Details: %v", tx.Error)
+	}
+
+	return true, nil
+}
+
+func checkTcknViaApi(requestParams model.TcknCheckRequestParams, printResponse bool) (response bool, err error) {
+	jsonBody, err := json.Marshal(requestParams)
+	if err != nil {
+		fmt.Printf("JSON marshal error: %v", err)
+	}
+
+	req, err := http.NewRequest("POST", os.Getenv("TCKN_CHECK_URL"), bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("TCKN_CHECK_SERVICE_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	if printResponse {
+		fmt.Println("request Headers:", req.Header)
+		fmt.Println("request Body:", string(jsonBody))
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	if printResponse {
+		fmt.Println("response Status:", resp.Status)
+		fmt.Println("response Headers:", resp.Header)
+		fmt.Println("response Body:", string(body))
+	}
+
+	apiRes := make(map[string]string)
+	err = json.Unmarshal(body, &apiRes)
+	if err != nil {
+		return false, err
+	}
+	response, err = strconv.ParseBool(apiRes["approved"])
+
+	return response, err
 }
 
 func anyRuleExists(ruleSets []model.RuleSet) bool {
